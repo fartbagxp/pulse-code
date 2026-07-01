@@ -1,0 +1,328 @@
+{
+  "queries": [
+    {
+      "filename": "births-by-year-1995-2002-req.xml",
+      "dataset_id": "D10",
+      "description": "Annual live birth counts by year, 1995-2002",
+      "topic": "Natality",
+      "tags": ["birth", "natality", "fertility", "historical", "annual", "count"],
+      "groupings": ["Year"],
+      "year_range": "1995-2002"
+    },
+    {
+      "filename": "births-by-year-2003-2006-req.xml",
+      "dataset_id": "D27",
+      "description": "Annual live birth counts by year, 2003-2006",
+      "topic": "Natality",
+      "tags": ["birth", "natality", "fertility", "historical", "annual", "count"],
+      "groupings": ["Year"],
+      "year_range": "2003-2006"
+    },
+    {
+      "filename": "births-by-year-2007-2024-req.xml",
+      "dataset_id": "D66",
+      "description": "Annual live birth counts by year, 2007-2024",
+      "topic": "Natality",
+      "tags": ["birth", "natality", "fertility", "annual", "count", "recent"],
+      "groupings": ["Year"],
+      "year_range": "2007-2024"
+    },
+    {
+      "filename": "covid-deaths-by-race-2020-2023-req.xml",
+      "dataset_id": "D176",
+      "description": "COVID-19 deaths broken down by race and ethnicity, 2020-2023",
+      "topic": "Mortality",
+      "tags": ["COVID", "COVID-19", "pandemic", "race", "ethnicity", "disparity", "deaths"],
+      "groupings": ["Year", "Race/Ethnicity"],
+      "year_range": "2020-2023"
+    },
+    {
+      "filename": "drug-deaths-by-month-1999-2020-req.xml",
+      "dataset_id": "D77",
+      "description": "Drug overdose deaths by month and substance type (opioids, cocaine, meth), 1999-2020",
+      "topic": "Mortality",
+      "tags": ["drug", "overdose", "opioid", "heroin", "fentanyl", "cocaine", "meth", "monthly", "substance", "deaths", "historical"],
+      "groupings": ["Year", "Month", "Drug/Substance"],
+      "year_range": "1999-2020"
+    },
+    {
+      "filename": "drug-deaths-by-month-2018-2024-req.xml",
+      "dataset_id": "D176",
+      "description": "Drug overdose deaths by month and substance type (opioids, cocaine, meth), 2018-2024",
+      "topic": "Mortality",
+      "tags": ["drug", "overdose", "opioid", "heroin", "fentanyl", "cocaine", "meth", "monthly", "substance", "deaths", "recent", "provisional"],
+      "groupings": ["Year", "Month", "Drug/Substance"],
+      "year_range": "2018-2024"
+    },
+    {
+      "filename": "drug-deaths-by-year-1999-2020-req.xml",
+      "dataset_id": "D77",
+      "description": "Drug overdose deaths by year and substance (opioids, cocaine, meth, psychostimulants), 1999-2020",
+      "topic": "Mortality",
+      "tags": ["drug", "overdose", "opioid", "heroin", "fentanyl", "cocaine", "meth", "annual", "substance", "deaths", "historical"],
+      "groupings": ["Year", "Drug/Substance"],
+      "year_range": "1999-2020"
+    },
+    {
+      "filename": "drug-deaths-by-year-2018-2024-req.xml",
+      "dataset_id": "D176",
+      "description": "Drug overdose deaths by year and substance (opioids, cocaine, meth, psychostimulants), 2018-2024",
+      "topic": "Mortality",
+      "tags": ["drug", "overdose", "opioid", "heroin", "fentanyl", "cocaine", "meth", "annual", "substance", "deaths", "recent", "provisional"],
+      "groupings": ["Year", "Drug/Substance"],
+      "year_range": "2018-2024"
+    },
+    {
+      "filename": "fentanyl-deaths-by-month-1999-2020-req.xml",
+      "dataset_id": "D77",
+      "description": "Fentanyl and synthetic opioid overdose deaths by month, 1999-2020",
+      "topic": "Mortality",
+      "tags": ["fentanyl", "opioid", "synthetic", "overdose", "monthly", "deaths", "historical"],
+      "groupings": ["Year", "Month"],
+      "year_range": "1999-2020"
+    },
+    {
+      "filename": "fentanyl-deaths-by-month-2018-2024-req.xml",
+      "dataset_id": "D176",
+      "description": "Fentanyl and synthetic opioid overdose deaths by month, 2018-2024",
+      "topic": "Mortality",
+      "tags": ["fentanyl", "opioid", "synthetic", "overdose", "monthly", "deaths", "recent", "provisional"],
+      "groupings": ["Year", "Month"],
+      "year_range": "2018-2024"
+    },
+    {
+      "filename": "heart-vs-cancer-by-sex-2018-2023-req.xml",
+      "dataset_id": "D176",
+      "description": "Heart disease vs. cancer deaths compared by sex, 2018-2023 — America's top two killers",
+      "topic": "Mortality",
+      "tags": ["heart disease", "cancer", "sex", "leading cause", "comparison", "cardiovascular", "deaths"],
+      "groupings": ["Year", "Cause of Death", "Sex"],
+      "year_range": "2018-2023"
+    },
+    {
+      "filename": "infant-mortality-2018-2023-req.xml",
+      "dataset_id": "D176",
+      "description": "Infant mortality (deaths under age 1) by year, 2018-2023",
+      "topic": "Mortality",
+      "tags": ["infant", "neonatal", "SIDS", "mortality", "age", "deaths", "under 1"],
+      "groupings": ["Year", "Age (infant)"],
+      "year_range": "2018-2023"
+    },
+    {
+      "filename": "maternal-mortality-by-year-1999-2020-req.xml",
+      "dataset_id": "D158",
+      "description": "Maternal mortality (pregnancy-related deaths) by year, 1999-2020",
+      "topic": "Mortality",
+      "tags": ["maternal", "maternal mortality", "pregnancy", "childbirth", "obstetric", "deaths", "historical"],
+      "groupings": ["Year"],
+      "year_range": "1999-2020"
+    },
+    {
+      "filename": "maternal-mortality-by-year-2018-2024-req.xml",
+      "dataset_id": "D158",
+      "description": "Maternal mortality (pregnancy-related deaths) by year, 2018-2024",
+      "topic": "Mortality",
+      "tags": ["maternal", "maternal mortality", "pregnancy", "childbirth", "obstetric", "deaths", "recent"],
+      "groupings": ["Year"],
+      "year_range": "2018-2024"
+    },
+    {
+      "filename": "mortality-by-year-cause-1979-1998-req.xml",
+      "dataset_id": "D16",
+      "description": "All-cause mortality by year and ICD-9 cause of death, 1979-1998",
+      "topic": "Mortality",
+      "tags": ["all-cause", "mortality", "cause of death", "ICD-9", "historical", "annual"],
+      "groupings": ["Year", "ICD-9 Cause"],
+      "year_range": "1979-1998"
+    },
+    {
+      "filename": "mortality-by-year-cause-1999-2020-req.xml",
+      "dataset_id": "D77",
+      "description": "All-cause mortality by year and ICD-10 cause of death, 1999-2020",
+      "topic": "Mortality",
+      "tags": ["all-cause", "mortality", "cause of death", "ICD-10", "historical", "annual"],
+      "groupings": ["Year", "ICD-10 Cause"],
+      "year_range": "1999-2020"
+    },
+    {
+      "filename": "mortality-by-year-cause-2021-2024-req.xml",
+      "dataset_id": "D176",
+      "description": "All-cause mortality by year and ICD-10 cause of death, 2021-2024",
+      "topic": "Mortality",
+      "tags": ["all-cause", "mortality", "cause of death", "ICD-10", "annual", "recent", "provisional"],
+      "groupings": ["Year", "ICD-10 Cause"],
+      "year_range": "2021-2024"
+    },
+    {
+      "filename": "opioid-overdose-deaths-2018-2024-req.xml",
+      "dataset_id": "D176",
+      "description": "Opioid overdose deaths (all types) by year, 2018-2024",
+      "topic": "Mortality",
+      "tags": ["opioid", "overdose", "deaths", "annual", "recent", "provisional", "heroin", "fentanyl", "prescription"],
+      "groupings": ["Year"],
+      "year_range": "2018-2024"
+    },
+    {
+      "filename": "racial-mortality-gap-2018-2023-req.xml",
+      "dataset_id": "D176",
+      "description": "Racial mortality gap — deaths by race and ethnicity, 2018-2023",
+      "topic": "Mortality",
+      "tags": ["race", "ethnicity", "disparity", "gap", "mortality", "deaths", "equity", "Black", "White", "Hispanic"],
+      "groupings": ["Year", "Race/Ethnicity"],
+      "year_range": "2018-2023"
+    },
+    {
+      "filename": "suicide-by-sex-1999-2020-req.xml",
+      "dataset_id": "D77",
+      "description": "Suicide deaths by sex and year, 1999-2020",
+      "topic": "Mortality",
+      "tags": ["suicide", "mental health", "sex", "male", "female", "deaths", "historical", "firearms", "self-harm"],
+      "groupings": ["Year", "Sex"],
+      "year_range": "1999-2020"
+    },
+    {
+      "filename": "suicide-by-sex-2021-2024-req.xml",
+      "dataset_id": "D176",
+      "description": "Suicide deaths by sex and year, 2021-2024",
+      "topic": "Mortality",
+      "tags": ["suicide", "mental health", "sex", "male", "female", "deaths", "recent", "provisional", "self-harm"],
+      "groupings": ["Year", "Sex"],
+      "year_range": "2021-2024"
+    },
+    {
+      "filename": "tick-borne-diseases-by-year-2016-2023-req.xml",
+      "dataset_id": "D130",
+      "description": "Tick-borne disease cases (Lyme, Rocky Mountain spotted fever, anaplasmosis, ehrlichiosis) by year, 2016-2023",
+      "topic": "Infectious Disease",
+      "tags": ["tick", "Lyme disease", "Rocky Mountain spotted fever", "anaplasmosis", "ehrlichiosis", "tick-borne", "infectious", "cases", "NNDSS"],
+      "groupings": ["Year", "Disease"],
+      "year_range": "2016-2023"
+    },
+    {
+      "filename": "unintentional-injuries-by-age-2018-2023-req.xml",
+      "dataset_id": "D176",
+      "description": "Unintentional injury deaths by age group, 2018-2023 — includes falls, poisoning, motor vehicle crashes",
+      "topic": "Mortality",
+      "tags": ["unintentional injury", "accident", "falls", "poisoning", "motor vehicle", "crash", "age", "deaths"],
+      "groupings": ["Year", "Age Group"],
+      "year_range": "2018-2023"
+    },
+    {
+      "filename": "tb-cases-by-year-1993-2023-req.xml",
+      "dataset_id": "D202",
+      "description": "Tuberculosis cases and incidence rate per 100,000 by year, 1993-2023",
+      "topic": "Tuberculosis",
+      "tags": ["tuberculosis", "TB", "OTIS", "infectious disease", "cases", "incidence", "rate", "trend", "annual"],
+      "groupings": ["Year"],
+      "year_range": "1993-2023"
+    },
+    {
+      "filename": "fetal-deaths-by-year-2005-2024-req.xml",
+      "dataset_id": "D133",
+      "description": "Fetal death counts by year, 2005-2024",
+      "topic": "Fetal Deaths",
+      "tags": ["fetal death", "stillbirth", "fetal", "stillborn", "annual", "trend", "count"],
+      "groupings": ["Year"],
+      "year_range": "2005-2024"
+    },
+    {
+      "filename": "fetal-deaths-by-cause-by-year-2014-2024-req.xml",
+      "dataset_id": "D150",
+      "description": "Fetal deaths by year and ICD chapter cause of death, 2014-2024",
+      "topic": "Fetal Deaths",
+      "tags": ["fetal death", "stillbirth", "fetal", "cause of death", "ICD", "ICD chapter", "perinatal", "congenital", "annual"],
+      "groupings": ["Year", "ICD Chapter (Cause of Death)"],
+      "year_range": "2014-2024"
+    },
+    {
+      "filename": "cancer-incidence-by-site-by-year-1999-2022-req.xml",
+      "dataset_id": "D205",
+      "description": "Cancer incidence by site (cancer type) and year, 1999-2022",
+      "topic": "Cancer",
+      "tags": ["cancer", "incidence", "tumor", "neoplasm", "breast cancer", "lung cancer", "colorectal", "prostate", "leukemia", "annual", "rate"],
+      "groupings": ["Cancer Site", "Year"],
+      "year_range": "1999-2022"
+    },
+    {
+      "filename": "cancer-mortality-by-site-by-year-2018-2023-req.xml",
+      "dataset_id": "D207",
+      "description": "Cancer deaths by site (cancer type) and year, 2018-2023",
+      "topic": "Cancer",
+      "tags": ["cancer", "mortality", "deaths", "tumor", "neoplasm", "breast cancer", "lung cancer", "colorectal", "prostate", "annual", "rate"],
+      "groupings": ["Cancer Site", "Year"],
+      "year_range": "2018-2023"
+    },
+    {
+      "filename": "std-cases-by-disease-by-year-1984-2014-req.xml",
+      "dataset_id": "D127",
+      "description": "STD morbidity by disease type and year, 1984-2014 — chlamydia, gonorrhea, syphilis, chancroid",
+      "topic": "STI / Sexual Health",
+      "tags": ["STD", "STI", "chlamydia", "gonorrhea", "syphilis", "sexually transmitted", "disease", "cases", "annual", "trend"],
+      "groupings": ["Disease", "Year"],
+      "year_range": "1984-2014"
+    },
+    {
+      "filename": "aids-cases-by-year-1981-1999-req.xml",
+      "dataset_id": "D12",
+      "description": "AIDS cases by year diagnosed, 1981-1999 — tracks the US AIDS epidemic",
+      "topic": "HIV/AIDS",
+      "tags": ["AIDS", "HIV", "epidemic", "cases", "year", "annual", "trend", "1980s", "1990s"],
+      "groupings": ["Year Diagnosed"],
+      "year_range": "1981-1999"
+    },
+    {
+      "filename": "pm25-by-year-2003-2011-req.xml",
+      "dataset_id": "D73",
+      "description": "Fine particulate matter (PM2.5) annual average by year, 2003-2011",
+      "topic": "Environment",
+      "tags": ["PM2.5", "air quality", "particulate matter", "pollution", "environment", "annual"],
+      "groupings": ["Year"],
+      "year_range": "2003-2011"
+    },
+    {
+      "filename": "heat-wave-days-by-county-req.xml",
+      "dataset_id": "D104",
+      "description": "Average number of heat wave days by year (national), 1981-2010",
+      "topic": "Environment",
+      "tags": ["heat wave", "heat", "temperature", "climate", "environment", "extreme heat", "annual"],
+      "groupings": ["Year"],
+      "year_range": "1981-2010"
+    },
+    {
+      "filename": "infant-mortality-by-cause-by-year-2007-2023-req.xml",
+      "dataset_id": "D69",
+      "description": "Infant mortality by cause of death and year, 2007-2023 — linked birth/death records",
+      "topic": "Infant Mortality",
+      "tags": ["infant", "neonatal", "SIDS", "mortality", "cause of death", "ICD", "annual", "linked birth"],
+      "groupings": ["Year", "Cause of Death (ICD-10)"],
+      "year_range": "2007-2023"
+    },
+    {
+      "filename": "underlying-cause-mortality-by-year-1999-2020-req.xml",
+      "dataset_id": "D76",
+      "description": "Underlying cause of death by ICD chapter and year, 1999-2020",
+      "topic": "Mortality",
+      "tags": ["mortality", "deaths", "cause of death", "ICD chapter", "underlying cause", "historical", "annual"],
+      "groupings": ["Year", "ICD Chapter"],
+      "year_range": "1999-2020"
+    },
+    {
+      "filename": "mortality-by-race-sex-2018-2023-req.xml",
+      "dataset_id": "D157",
+      "description": "All-cause mortality by year and single race, 2018-2023 — final death statistics",
+      "topic": "Mortality",
+      "tags": ["mortality", "deaths", "race", "ethnicity", "disparity", "single race", "annual", "final"],
+      "groupings": ["Year", "Single Race"],
+      "year_range": "2018-2023"
+    },
+    {
+      "filename": "provisional-births-by-month-2023-req.xml",
+      "dataset_id": "D192",
+      "description": "Provisional birth counts by year and month, 2023-present",
+      "topic": "Natality",
+      "tags": ["birth", "natality", "provisional", "monthly", "recent", "fertility", "trend"],
+      "groupings": ["Year", "Month"],
+      "year_range": "2023-present"
+    }
+  ]
+}
