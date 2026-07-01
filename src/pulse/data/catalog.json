@@ -1,0 +1,1599 @@
+{
+  "datasets": [
+    {
+      "id": "D176",
+      "title": "Provisional Mortality Statistics",
+      "topic": "Mortality",
+      "subject": "Track deaths by all causes with weekly updates. Covers COVID-19, opioid overdoses, heart disease, cancer, suicide, maternal mortality, and more. The go-to dataset for recent mortality trends.",
+      "year_start": 2018,
+      "year_end": null,
+      "year_range_label": "2018\u2013present",
+      "tags": [
+        "mortality",
+        "death",
+        "provisional",
+        "opioid",
+        "covid",
+        "suicide",
+        "cancer",
+        "heart disease",
+        "drug",
+        "fentanyl",
+        "overdose",
+        "weekly",
+        "recent"
+      ],
+      "measures": [
+        {
+          "code": "D176.M1",
+          "label": "Deaths"
+        },
+        {
+          "code": "D176.M2",
+          "label": "Population"
+        },
+        {
+          "code": "D176.M3",
+          "label": "Crude Rate (per 100k)"
+        },
+        {
+          "code": "D176.M9",
+          "label": "Age-Adjusted Rate"
+        }
+      ],
+      "key_groupings": [
+        "Year / Month / Quarter / Week",
+        "Residence State / County",
+        "ICD-10 Chapter (cause of death)",
+        "ICD-10 Subcategory",
+        "Drug/Alcohol cause (MCD)",
+        "Age (10-yr, 5-yr bands)",
+        "Sex",
+        "Race/Ethnicity (bridged)",
+        "Urbanization",
+        "HHS Region / Census Region"
+      ],
+      "has_template": true,
+      "has_aar": true,
+      "notes": "Provisional \u2014 subject to revision. Updated weekly. Most current mortality data available."
+    },
+    {
+      "id": "D157",
+      "title": "Final Mortality, Single Race (MCD + UCD)",
+      "topic": "Mortality",
+      "subject": "Final (non-provisional) mortality statistics with single-race classification for 2018-2023. Includes both underlying and multiple causes of death. Use when you need finalized mortality counts with detailed race/ethnicity breakdown.",
+      "year_start": 2018,
+      "year_end": 2023,
+      "year_range_label": "2018\u20132023",
+      "tags": [
+        "mortality",
+        "death",
+        "final",
+        "race",
+        "single-race",
+        "multiple cause",
+        "underlying cause"
+      ],
+      "measures": [
+        {
+          "code": "D157.M1",
+          "label": "Deaths"
+        },
+        {
+          "code": "D157.M2",
+          "label": "Population"
+        },
+        {
+          "code": "D157.M3",
+          "label": "Crude Rate"
+        },
+        {
+          "code": "D157.M9",
+          "label": "Age-Adjusted Rate"
+        }
+      ],
+      "key_groupings": [
+        "Year / Month",
+        "State / County",
+        "ICD-10 Cause (UCD or MCD)",
+        "Age",
+        "Sex",
+        "Single Race / Ethnicity",
+        "Urbanization"
+      ],
+      "has_template": true,
+      "has_aar": true,
+      "notes": "Final data. Single-race classification per 1997 OMB standards."
+    },
+    {
+      "id": "D158",
+      "title": "Underlying Cause of Death, Single Race",
+      "topic": "Mortality",
+      "subject": "Final mortality data for 2018-2023 focused on underlying cause of death with single-race classification. Best for maternal mortality, cause-specific trends, and race-stratified analysis without multiple-cause filters.",
+      "year_start": 2018,
+      "year_end": 2023,
+      "year_range_label": "2018\u20132023",
+      "tags": [
+        "mortality",
+        "death",
+        "final",
+        "underlying cause",
+        "maternal",
+        "race",
+        "single-race"
+      ],
+      "measures": [
+        {
+          "code": "D158.M1",
+          "label": "Deaths"
+        },
+        {
+          "code": "D158.M2",
+          "label": "Population"
+        },
+        {
+          "code": "D158.M3",
+          "label": "Crude Rate"
+        },
+        {
+          "code": "D158.M9",
+          "label": "Age-Adjusted Rate"
+        }
+      ],
+      "key_groupings": [
+        "Year / Month",
+        "State / County",
+        "ICD-10 Underlying Cause",
+        "Age",
+        "Sex",
+        "Single Race / Ethnicity"
+      ],
+      "has_template": true,
+      "has_aar": true,
+      "notes": "No MCD filters available. Use D157 if you need multiple-cause filtering."
+    },
+    {
+      "id": "D77",
+      "title": "Multiple Cause of Death",
+      "topic": "Mortality",
+      "subject": "Historical mortality with both underlying and multiple causes of death for 1999-2020. Standard dataset for drug overdose deaths, where the drug appears anywhere on the death certificate. Final, bridged-race data.",
+      "year_start": 1999,
+      "year_end": 2020,
+      "year_range_label": "1999\u20132020",
+      "tags": [
+        "mortality",
+        "death",
+        "historical",
+        "multiple cause",
+        "drug",
+        "opioid",
+        "heroin",
+        "fentanyl",
+        "cocaine",
+        "meth",
+        "ICD-10",
+        "bridged-race"
+      ],
+      "measures": [
+        {
+          "code": "D77.M1",
+          "label": "Deaths"
+        },
+        {
+          "code": "D77.M2",
+          "label": "Population"
+        },
+        {
+          "code": "D77.M3",
+          "label": "Crude Rate"
+        },
+        {
+          "code": "D77.M9",
+          "label": "Age-Adjusted Rate"
+        }
+      ],
+      "key_groupings": [
+        "Year / Month",
+        "State / County",
+        "ICD-10 Chapter (UCD)",
+        "MCD Drug/Alcohol Codes",
+        "Age (10-yr, 5-yr bands)",
+        "Sex",
+        "Race (bridged)",
+        "Urbanization"
+      ],
+      "has_template": true,
+      "has_aar": true,
+      "notes": "Pair with D176 (2021+) for full trend since 1999. ICD-10 coding."
+    },
+    {
+      "id": "D76",
+      "title": "Underlying Cause of Death",
+      "topic": "Mortality",
+      "subject": "Historical mortality by single underlying cause of death for 1999-2020. Useful for suicide, cancer, heart disease, and cause-specific trends. Final ICD-10 data, no multiple-cause filters.",
+      "year_start": 1999,
+      "year_end": 2020,
+      "year_range_label": "1999\u20132020",
+      "tags": [
+        "mortality",
+        "death",
+        "historical",
+        "underlying cause",
+        "suicide",
+        "cancer",
+        "heart disease",
+        "ICD-10"
+      ],
+      "measures": [
+        {
+          "code": "D76.M1",
+          "label": "Deaths"
+        },
+        {
+          "code": "D76.M2",
+          "label": "Population"
+        },
+        {
+          "code": "D76.M3",
+          "label": "Crude Rate"
+        },
+        {
+          "code": "D76.M9",
+          "label": "Age-Adjusted Rate"
+        }
+      ],
+      "key_groupings": [
+        "Year / Month",
+        "State / County",
+        "ICD-10 Chapter",
+        "ICD-10 Cause Code",
+        "Age",
+        "Sex",
+        "Race (bridged)"
+      ],
+      "has_template": true,
+      "has_aar": true,
+      "notes": "No MCD (drug-involvement) filters. Use D77 for drug overdose counts."
+    },
+    {
+      "id": "D141",
+      "title": "Multiple Cause of Death with US-Mexico Border Regions",
+      "topic": "Mortality",
+      "subject": "Like D77 (MCD 1999-2020) but adds US-Mexico border region and metropolitan geography. Useful for border health, rural-urban disparities, and geographic analyses of drug or cause-specific deaths.",
+      "year_start": 1999,
+      "year_end": 2020,
+      "year_range_label": "1999\u20132020",
+      "tags": [
+        "mortality",
+        "death",
+        "multiple cause",
+        "border",
+        "geography",
+        "metro",
+        "rural",
+        "urban",
+        "ICD-10"
+      ],
+      "measures": [
+        {
+          "code": "D141.M1",
+          "label": "Deaths"
+        },
+        {
+          "code": "D141.M2",
+          "label": "Population"
+        },
+        {
+          "code": "D141.M3",
+          "label": "Crude Rate"
+        },
+        {
+          "code": "D141.M9",
+          "label": "Age-Adjusted Rate"
+        }
+      ],
+      "key_groupings": [
+        "Year / Month",
+        "State / County",
+        "US-Mexico Border Region",
+        "Metropolitan Area",
+        "MCD Drug/Alcohol Codes",
+        "Age",
+        "Sex",
+        "Race"
+      ],
+      "has_template": true,
+      "has_aar": true,
+      "notes": "Extends D77 with additional geographic dimensions."
+    },
+    {
+      "id": "D140",
+      "title": "Compressed Mortality (ICD-10)",
+      "topic": "Mortality",
+      "subject": "Compressed mortality data using ICD-10 codes for 1999-2016. Fewer variables than D77 but covers the same period. Useful when you need a simpler query structure for broad cause-of-death analysis.",
+      "year_start": 1999,
+      "year_end": 2016,
+      "year_range_label": "1999\u20132016",
+      "tags": [
+        "mortality",
+        "death",
+        "compressed",
+        "ICD-10",
+        "historical"
+      ],
+      "measures": [
+        {
+          "code": "D140.M1",
+          "label": "Deaths"
+        },
+        {
+          "code": "D140.M2",
+          "label": "Population"
+        },
+        {
+          "code": "D140.M3",
+          "label": "Crude Rate"
+        }
+      ],
+      "key_groupings": [
+        "Year",
+        "State",
+        "ICD-10 Cause",
+        "Age",
+        "Sex",
+        "Race"
+      ],
+      "has_template": true,
+      "has_aar": false,
+      "notes": "Fewer variables than D77. No MCD filters."
+    },
+    {
+      "id": "D16",
+      "title": "Compressed Mortality (ICD-9)",
+      "topic": "Mortality",
+      "subject": "Mortality using ICD-9 codes from 1979-1998. Essential for long-term trends \u2014 heart disease, cancer, HIV/AIDS, accidents \u2014 before ICD-10 was adopted in 1999.",
+      "year_start": 1979,
+      "year_end": 1998,
+      "year_range_label": "1979\u20131998",
+      "tags": [
+        "mortality",
+        "death",
+        "historical",
+        "ICD-9",
+        "1980s",
+        "1990s",
+        "HIV",
+        "AIDS",
+        "long-term"
+      ],
+      "measures": [
+        {
+          "code": "D16.M1",
+          "label": "Deaths"
+        },
+        {
+          "code": "D16.M2",
+          "label": "Population"
+        },
+        {
+          "code": "D16.M3",
+          "label": "Crude Rate"
+        }
+      ],
+      "key_groupings": [
+        "Year",
+        "State",
+        "ICD-9 Cause",
+        "Age",
+        "Sex",
+        "Race"
+      ],
+      "has_template": true,
+      "has_aar": false,
+      "notes": "ICD-9 coding system. Pair with D77/D176 for 1979\u2013present trends."
+    },
+    {
+      "id": "D74",
+      "title": "Compressed Mortality (ICD-8)",
+      "topic": "Mortality",
+      "subject": "Pre-ICD-9 mortality data from 1968-1978 using ICD-8 codes. For historical context: the polio era's tail, early cardiovascular mortality, before modern trauma care.",
+      "year_start": 1968,
+      "year_end": 1978,
+      "year_range_label": "1968\u20131978",
+      "tags": [
+        "mortality",
+        "death",
+        "historical",
+        "ICD-8",
+        "1970s",
+        "1960s"
+      ],
+      "measures": [
+        {
+          "code": "D74.M1",
+          "label": "Deaths"
+        },
+        {
+          "code": "D74.M2",
+          "label": "Population"
+        },
+        {
+          "code": "D74.M3",
+          "label": "Crude Rate"
+        }
+      ],
+      "key_groupings": [
+        "Year",
+        "State",
+        "ICD-8 Cause",
+        "Age",
+        "Sex",
+        "Race"
+      ],
+      "has_template": true,
+      "has_aar": false,
+      "notes": "ICD-8 coding. Use D16 for 1979+ comparisons."
+    },
+    {
+      "id": "D69",
+      "title": "Linked Birth / Infant Death Records",
+      "topic": "Infant Mortality",
+      "subject": "Links birth certificates to infant death records to track neonatal and post-neonatal mortality. Covers causes of infant death, gestational age, birth weight, maternal factors, and birth outcomes.",
+      "year_start": 2007,
+      "year_end": 2023,
+      "year_range_label": "2007\u20132023",
+      "tags": [
+        "infant mortality",
+        "birth",
+        "neonatal",
+        "SIDS",
+        "preterm",
+        "low birth weight",
+        "linked",
+        "maternal"
+      ],
+      "measures": [
+        {
+          "code": "D69.M1",
+          "label": "Deaths"
+        },
+        {
+          "code": "D69.M2",
+          "label": "Births"
+        },
+        {
+          "code": "D69.M3",
+          "label": "Mortality Rate (per 1,000 live births)"
+        }
+      ],
+      "key_groupings": [
+        "Year",
+        "State",
+        "Cause of death (ICD-10)",
+        "Age at death (neonatal/post-neonatal)",
+        "Gestational age",
+        "Birth weight",
+        "Sex",
+        "Race/Ethnicity",
+        "Maternal age"
+      ],
+      "has_template": true,
+      "has_aar": false,
+      "notes": "Rate = deaths per 1,000 live births. No AAR. Use D159 for expanded race/ethnicity detail."
+    },
+    {
+      "id": "D159",
+      "title": "Linked Birth / Infant Death Records, Expanded",
+      "topic": "Infant Mortality",
+      "subject": "Like D69 but with expanded race/ethnicity detail and additional demographic variables. Best for detailed analysis of infant mortality disparities by race, Hispanic origin, and maternal characteristics.",
+      "year_start": 2017,
+      "year_end": 2023,
+      "year_range_label": "2017\u20132023",
+      "tags": [
+        "infant mortality",
+        "birth",
+        "neonatal",
+        "race",
+        "expanded",
+        "SIDS",
+        "preterm"
+      ],
+      "measures": [
+        {
+          "code": "D159.M1",
+          "label": "Deaths"
+        },
+        {
+          "code": "D159.M2",
+          "label": "Births"
+        },
+        {
+          "code": "D159.M3",
+          "label": "Mortality Rate (per 1,000 live births)"
+        }
+      ],
+      "key_groupings": [
+        "Year",
+        "State",
+        "Cause of death",
+        "Gestational age",
+        "Birth weight",
+        "Single Race / Ethnicity (detailed)",
+        "Maternal age / education"
+      ],
+      "has_template": true,
+      "has_aar": false,
+      "notes": "Expanded demographic detail vs D69. Only available from 2017."
+    },
+    {
+      "id": "D31",
+      "title": "Linked Birth / Infant Death Records (2003\u20132006)",
+      "topic": "Infant Mortality",
+      "subject": "Linked birth/infant death data for 2003-2006. Same concept as D69 but for earlier years. Use for historical infant mortality trends.",
+      "year_start": 2003,
+      "year_end": 2006,
+      "year_range_label": "2003\u20132006",
+      "tags": [
+        "infant mortality",
+        "birth",
+        "neonatal",
+        "historical",
+        "linked"
+      ],
+      "measures": [
+        {
+          "code": "D31.M1",
+          "label": "Deaths"
+        },
+        {
+          "code": "D31.M3",
+          "label": "Mortality Rate"
+        }
+      ],
+      "key_groupings": [
+        "Year",
+        "State",
+        "Cause",
+        "Age at death",
+        "Race",
+        "Gestational age"
+      ],
+      "has_template": true,
+      "has_aar": false,
+      "notes": "Pair with D18 (1999-2002) and D69 (2007+) for long-term trends."
+    },
+    {
+      "id": "D18",
+      "title": "Linked Birth / Infant Death Records (1999\u20132002)",
+      "topic": "Infant Mortality",
+      "subject": "Linked birth/infant death data for 1999-2002.",
+      "year_start": 1999,
+      "year_end": 2002,
+      "year_range_label": "1999\u20132002",
+      "tags": [
+        "infant mortality",
+        "birth",
+        "neonatal",
+        "historical",
+        "linked"
+      ],
+      "measures": [
+        {
+          "code": "D18.M1",
+          "label": "Deaths"
+        },
+        {
+          "code": "D18.M3",
+          "label": "Mortality Rate"
+        }
+      ],
+      "key_groupings": [
+        "Year",
+        "State",
+        "Cause",
+        "Age at death",
+        "Race"
+      ],
+      "has_template": true,
+      "has_aar": false,
+      "notes": "Earliest linked birth/infant death records available."
+    },
+    {
+      "id": "D23",
+      "title": "Linked Birth / Infant Death Records (1995\u20131998)",
+      "topic": "Infant Mortality",
+      "subject": "Linked birth/infant death data for 1995-1998.",
+      "year_start": 1995,
+      "year_end": 1998,
+      "year_range_label": "1995\u20131998",
+      "tags": [
+        "infant mortality",
+        "birth",
+        "neonatal",
+        "historical",
+        "linked"
+      ],
+      "measures": [
+        {
+          "code": "D23.M1",
+          "label": "Deaths"
+        },
+        {
+          "code": "D23.M3",
+          "label": "Mortality Rate"
+        }
+      ],
+      "key_groupings": [
+        "Year",
+        "State",
+        "Cause",
+        "Age at death",
+        "Race"
+      ],
+      "has_template": true,
+      "has_aar": false,
+      "notes": "Use with D18, D31, D69 to build 1995-present infant mortality trend."
+    },
+    {
+      "id": "D66",
+      "title": "Natality",
+      "topic": "Natality",
+      "subject": "Live births data covering birth rates, fertility rates, maternal age, prenatal care, gestational age, birth weight, cesarean delivery, smoking during pregnancy, and other birth outcomes. The main dataset for birth statistics.",
+      "year_start": 2007,
+      "year_end": 2024,
+      "year_range_label": "2007\u20132024",
+      "tags": [
+        "birth",
+        "natality",
+        "fertility",
+        "maternal",
+        "prenatal",
+        "cesarean",
+        "gestational age",
+        "birth weight",
+        "obstetric"
+      ],
+      "measures": [
+        {
+          "code": "D66.M1",
+          "label": "Births"
+        },
+        {
+          "code": "D66.M3",
+          "label": "Birth Rate (per 1,000 pop)"
+        },
+        {
+          "code": "D66.M10",
+          "label": "Fertility Rate (per 1,000 women 15-44)"
+        }
+      ],
+      "key_groupings": [
+        "Year / Month",
+        "State / County",
+        "Mother's Age",
+        "Race / Hispanic Origin",
+        "Birth order",
+        "Gestational age",
+        "Birth weight",
+        "Delivery method (C-section)",
+        "Prenatal care",
+        "Education",
+        "Marital status"
+      ],
+      "has_template": true,
+      "has_aar": false,
+      "notes": "No AAR. Rate = births per 1,000 population. Use D149 for expanded race detail."
+    },
+    {
+      "id": "D149",
+      "title": "Natality, Expanded",
+      "topic": "Natality",
+      "subject": "Like D66 but with detailed single-race classification and additional demographic variables. Best for analyzing birth disparities by race and ethnicity, or when you need variables not available in D66.",
+      "year_start": 2016,
+      "year_end": 2024,
+      "year_range_label": "2016\u20132024",
+      "tags": [
+        "birth",
+        "natality",
+        "fertility",
+        "race",
+        "expanded",
+        "maternal",
+        "disparity"
+      ],
+      "measures": [
+        {
+          "code": "D149.M1",
+          "label": "Births"
+        },
+        {
+          "code": "D149.M3",
+          "label": "Birth Rate"
+        }
+      ],
+      "key_groupings": [
+        "Year / Month",
+        "State",
+        "Single Race / Ethnicity (detailed)",
+        "Mother's Age",
+        "Gestational age",
+        "Birth weight"
+      ],
+      "has_template": true,
+      "has_aar": false,
+      "notes": "Expanded race detail. Only from 2016. Use D66 for 2007+ without race expansion."
+    },
+    {
+      "id": "D192",
+      "title": "Provisional Natality",
+      "topic": "Natality",
+      "subject": "Provisional (preliminary) birth data updated monthly. Use for the most current birth trend data \u2014 national fertility rates, birth counts by state.",
+      "year_start": 2023,
+      "year_end": null,
+      "year_range_label": "2023\u2013present",
+      "tags": [
+        "birth",
+        "natality",
+        "fertility",
+        "provisional",
+        "recent",
+        "monthly"
+      ],
+      "measures": [
+        {
+          "code": "D192.M1",
+          "label": "Births"
+        },
+        {
+          "code": "D192.M3",
+          "label": "Birth Rate"
+        }
+      ],
+      "key_groupings": [
+        "Year / Month",
+        "State"
+      ],
+      "has_template": true,
+      "has_aar": false,
+      "notes": "Very limited grouping options vs D66. Use for latest provisional counts only."
+    },
+    {
+      "id": "D27",
+      "title": "Natality (2003\u20132006)",
+      "topic": "Natality",
+      "subject": "Live birth data for 2003-2006. Use for historical birth trends.",
+      "year_start": 2003,
+      "year_end": 2006,
+      "year_range_label": "2003\u20132006",
+      "tags": [
+        "birth",
+        "natality",
+        "historical",
+        "fertility",
+        "maternal"
+      ],
+      "measures": [
+        {
+          "code": "D27.M1",
+          "label": "Births"
+        },
+        {
+          "code": "D27.M3",
+          "label": "Birth Rate"
+        }
+      ],
+      "key_groupings": [
+        "Year",
+        "State",
+        "Mother's Age",
+        "Race",
+        "Gestational age"
+      ],
+      "has_template": true,
+      "has_aar": false,
+      "notes": "Pair with D66 for 2003-present trends."
+    },
+    {
+      "id": "D10",
+      "title": "Natality (1995\u20132002)",
+      "topic": "Natality",
+      "subject": "Live birth data for 1995-2002. Use for historical birth trends predating D27.",
+      "year_start": 1995,
+      "year_end": 2002,
+      "year_range_label": "1995\u20132002",
+      "tags": [
+        "birth",
+        "natality",
+        "historical",
+        "fertility",
+        "maternal"
+      ],
+      "measures": [
+        {
+          "code": "D10.M1",
+          "label": "Births"
+        },
+        {
+          "code": "D10.M3",
+          "label": "Birth Rate"
+        }
+      ],
+      "key_groupings": [
+        "Year",
+        "State",
+        "Mother's Age",
+        "Race"
+      ],
+      "has_template": true,
+      "has_aar": false,
+      "notes": "Earliest natality data. Use with D27 and D66 for 1995-present."
+    },
+    {
+      "id": "D8",
+      "title": "VAERS \u2014 Vaccine Adverse Event Reporting System",
+      "topic": "Vaccine Safety",
+      "subject": "Reports of adverse events following vaccination from 1990 to present. Counts include deaths, hospitalizations, life-threatening reactions, and other outcomes reported after COVID-19, flu, MMR, and other vaccines. Self-reported \u2014 not evidence of causation.",
+      "year_start": 1990,
+      "year_end": null,
+      "year_range_label": "1990\u2013present",
+      "tags": [
+        "vaccine",
+        "adverse event",
+        "VAERS",
+        "COVID vaccine",
+        "flu vaccine",
+        "MMR",
+        "safety",
+        "reporting",
+        "reaction"
+      ],
+      "measures": [
+        {
+          "code": "D8.M1",
+          "label": "Events (count of adverse event reports)"
+        },
+        {
+          "code": "D8.M2",
+          "label": "Reports"
+        }
+      ],
+      "key_groupings": [
+        "Vaccine type (broad: COVID19, FLU, MMR, etc.)",
+        "Specific vaccine product",
+        "Symptom (MedDRA hierarchy)",
+        "Year received / Year reported",
+        "Age group",
+        "Sex",
+        "State",
+        "Event category (Death, Hospitalized, Life Threatening)",
+        "Serious (Yes/No)"
+      ],
+      "has_template": true,
+      "has_aar": false,
+      "notes": "Counts REPORTS, not incidence. Not evidence of causation. Passive surveillance system \u2014 reporting is voluntary."
+    },
+    {
+      "id": "D130",
+      "title": "NNDSS Annual Summary Data",
+      "topic": "Infectious Disease",
+      "subject": "Nationally Notifiable Disease Surveillance System (NNDSS) data on reportable infectious diseases including tick-borne diseases (Lyme, Rocky Mountain spotted fever, anaplasmosis, ehrlichiosis), STIs, measles, and more.",
+      "year_start": 2016,
+      "year_end": 2023,
+      "year_range_label": "2016\u20132023",
+      "tags": [
+        "infectious disease",
+        "notifiable",
+        "NNDSS",
+        "tick-borne",
+        "Lyme disease",
+        "Rocky Mountain spotted fever",
+        "STI",
+        "measles",
+        "surveillance"
+      ],
+      "measures": [
+        {
+          "code": "D130.M1",
+          "label": "Cases"
+        }
+      ],
+      "key_groupings": [
+        "Year",
+        "State",
+        "Disease"
+      ],
+      "has_template": false,
+      "has_aar": false,
+      "notes": "NNDSS annual summary. Bundled query covers tick-borne diseases 2016-2023."
+    },
+    {
+      "id": "D104",
+      "title": "Number of Heat Wave Days",
+      "topic": "Environment",
+      "subject": "Annual count of heat wave days (May-September) by county from 1981-2010. Derived from NLDAS climate data. Use to study climate-health connections and geographic heat exposure patterns.",
+      "year_start": 1981,
+      "year_end": 2010,
+      "year_range_label": "1981\u20132010",
+      "tags": [
+        "environment",
+        "heat wave",
+        "climate",
+        "temperature",
+        "county",
+        "summer",
+        "heat stress"
+      ],
+      "measures": [
+        {
+          "code": "D104.M1",
+          "label": "Heat Wave Days (mean)"
+        },
+        {
+          "code": "D104.M2",
+          "label": "Heat Wave Days (min)"
+        },
+        {
+          "code": "D104.M3",
+          "label": "Heat Wave Days (max)"
+        }
+      ],
+      "key_groupings": [
+        "Year",
+        "State / County"
+      ],
+      "has_template": true,
+      "has_aar": false,
+      "notes": "No age-adjusted rates. Geographic / temporal summary statistics."
+    },
+    {
+      "id": "D60",
+      "title": "NLDAS Daily Air Temperatures and Heat Index",
+      "topic": "Environment",
+      "subject": "Daily minimum, mean, and maximum temperature plus heat index by county, 1979-2011, from the North American Land Data Assimilation System (NLDAS). Use for climate-health linkage studies.",
+      "year_start": 1979,
+      "year_end": 2011,
+      "year_range_label": "1979\u20132011",
+      "tags": [
+        "environment",
+        "temperature",
+        "heat index",
+        "climate",
+        "NLDAS",
+        "county",
+        "weather"
+      ],
+      "measures": [
+        {
+          "code": "D60.M1",
+          "label": "Min Temperature"
+        },
+        {
+          "code": "D60.M2",
+          "label": "Mean Temperature"
+        },
+        {
+          "code": "D60.M3",
+          "label": "Max Temperature"
+        },
+        {
+          "code": "D60.M4",
+          "label": "Heat Index"
+        }
+      ],
+      "key_groupings": [
+        "Year / Month",
+        "State / County"
+      ],
+      "has_template": true,
+      "has_aar": false,
+      "notes": "Statistical summaries (mean, min, max, CI). Not mortality data."
+    },
+    {
+      "id": "D80",
+      "title": "NLDAS Daily Sunlight",
+      "topic": "Environment",
+      "subject": "Daily solar radiation (KJ/m\u00b2) by county, 1979-2011. From NLDAS. Useful for vitamin D research, seasonal affective studies, and environmental health analyses.",
+      "year_start": 1979,
+      "year_end": 2011,
+      "year_range_label": "1979\u20132011",
+      "tags": [
+        "environment",
+        "sunlight",
+        "solar radiation",
+        "climate",
+        "NLDAS",
+        "county"
+      ],
+      "measures": [
+        {
+          "code": "D80.M1",
+          "label": "Sunlight KJ/m\u00b2"
+        }
+      ],
+      "key_groupings": [
+        "Year / Month",
+        "State / County"
+      ],
+      "has_template": true,
+      "has_aar": false,
+      "notes": "Solar radiation data. Not mortality."
+    },
+    {
+      "id": "D81",
+      "title": "NLDAS Daily Precipitation",
+      "topic": "Environment",
+      "subject": "Daily precipitation (mm) by county, 1979-2011. From NLDAS. Use for climate-health linkage, flooding risk analysis, or environmental exposure studies.",
+      "year_start": 1979,
+      "year_end": 2011,
+      "year_range_label": "1979\u20132011",
+      "tags": [
+        "environment",
+        "precipitation",
+        "rain",
+        "climate",
+        "NLDAS",
+        "county",
+        "flooding"
+      ],
+      "measures": [
+        {
+          "code": "D81.M1",
+          "label": "Precipitation (mm)"
+        }
+      ],
+      "key_groupings": [
+        "Year / Month",
+        "State / County"
+      ],
+      "has_template": true,
+      "has_aar": false,
+      "notes": "Precipitation data. Not mortality."
+    },
+    {
+      "id": "D61",
+      "title": "MODIS Land Surface Temperature",
+      "topic": "Environment",
+      "subject": "Satellite-derived land surface temperature by county, 2003-2008, from MODIS Terra. Use for urban heat island studies, climate-health research, and geographic thermal exposure analysis.",
+      "year_start": 2003,
+      "year_end": 2008,
+      "year_range_label": "2003\u20132008",
+      "tags": [
+        "environment",
+        "temperature",
+        "satellite",
+        "MODIS",
+        "land surface",
+        "urban heat island",
+        "county"
+      ],
+      "measures": [
+        {
+          "code": "D61.M1",
+          "label": "Land Surface Temperature"
+        }
+      ],
+      "key_groupings": [
+        "Year",
+        "State / County"
+      ],
+      "has_template": true,
+      "has_aar": false,
+      "notes": "Satellite-derived. Shorter time range than NLDAS datasets."
+    },
+    {
+      "id": "D73",
+      "title": "Fine Particulate Matter PM2.5",
+      "topic": "Environment",
+      "subject": "Annual county-level fine particulate matter (PM2.5 \u00b5g/m\u00b3) concentrations, 2003-2011. PM2.5 is the key air pollutant linked to respiratory and cardiovascular mortality. Use to study air quality and health outcomes.",
+      "year_start": 2003,
+      "year_end": 2011,
+      "year_range_label": "2003\u20132011",
+      "tags": [
+        "environment",
+        "air quality",
+        "PM2.5",
+        "particulate matter",
+        "pollution",
+        "respiratory",
+        "cardiovascular",
+        "county"
+      ],
+      "measures": [
+        {
+          "code": "D73.M1",
+          "label": "PM2.5 Mean (\u00b5g/m\u00b3)"
+        },
+        {
+          "code": "D73.M2",
+          "label": "PM2.5 Min"
+        },
+        {
+          "code": "D73.M3",
+          "label": "PM2.5 Max"
+        }
+      ],
+      "key_groupings": [
+        "Year",
+        "State / County"
+      ],
+      "has_template": true,
+      "has_aar": false,
+      "notes": "Air quality data. Use with mortality data for pollution-health linkage studies."
+    },
+    {
+      "id": "D205",
+      "title": "US Cancer Statistics \u2014 Incidence",
+      "topic": "Cancer",
+      "subject": "Cancer incidence (new case counts and rates) for all cancer sites from 1999 to 2022, covering all US states plus Puerto Rico. Track breast, lung, colorectal, prostate, and 100+ other cancer types. Break down by state, age, sex, race, and year.",
+      "year_start": 1999,
+      "year_end": 2022,
+      "year_range_label": "1999\u20132022",
+      "tags": [
+        "cancer",
+        "incidence",
+        "tumor",
+        "oncology",
+        "breast cancer",
+        "lung cancer",
+        "colorectal",
+        "prostate",
+        "childhood cancer",
+        "new cases",
+        "USCS"
+      ],
+      "measures": [
+        {
+          "code": "D205.M1",
+          "label": "Count (new cancer cases)"
+        },
+        {
+          "code": "D205.M30",
+          "label": "Crude Rate"
+        },
+        {
+          "code": "D205.M40",
+          "label": "Age-Adjusted Rate"
+        }
+      ],
+      "key_groupings": [
+        "Cancer Site (all types, leading sites, childhood cancers)",
+        "Year",
+        "State / Region / MSA",
+        "Age Group",
+        "Sex",
+        "Race/Ethnicity"
+      ],
+      "has_template": false,
+      "has_aar": true,
+      "notes": "Most current cancer incidence. Many archived versions (D28, D40, D50, D70, D75, D85, D89, D94, D100, D113, D121, D136, D144, D151, D160, D172, D181, D187, D198) cover earlier years."
+    },
+    {
+      "id": "D207",
+      "title": "US Cancer Statistics \u2014 Mortality, Single Race",
+      "topic": "Cancer",
+      "subject": "Cancer mortality (deaths and rates) for 2018-2023 with single-race classification. Covers all cancer sites broken down by state, age, sex, and race. Pair with D205 (incidence) for survival and incidence-to-mortality comparisons.",
+      "year_start": 2018,
+      "year_end": 2023,
+      "year_range_label": "2018\u20132023",
+      "tags": [
+        "cancer",
+        "mortality",
+        "death",
+        "tumor",
+        "oncology",
+        "breast cancer",
+        "lung cancer",
+        "colorectal",
+        "prostate",
+        "single-race",
+        "USCS"
+      ],
+      "measures": [
+        {
+          "code": "D207.M1",
+          "label": "Deaths"
+        },
+        {
+          "code": "D207.M30",
+          "label": "Crude Rate"
+        },
+        {
+          "code": "D207.M40",
+          "label": "Age-Adjusted Rate"
+        }
+      ],
+      "key_groupings": [
+        "Cancer Site",
+        "Year",
+        "State / Region / MSA",
+        "Age Group",
+        "Sex",
+        "Single Race / Ethnicity"
+      ],
+      "has_template": false,
+      "has_aar": true,
+      "notes": "Most current cancer mortality with single-race detail. Historical archived versions: D29, D41, D51, D71, D90, D95, D101, D114, D125, D137, D145, D152, D161, D173, D182, D188, D199."
+    },
+    {
+      "id": "D127",
+      "title": "STD Morbidity",
+      "topic": "STI / Sexual Health",
+      "subject": "National surveillance data on sexually transmitted infections including chlamydia, gonorrhea, syphilis (all stages), and other reportable STDs. Case counts and rates by state, year, sex, disease type, and STD surveillance region. 1984-2014.",
+      "year_start": 1984,
+      "year_end": 2014,
+      "year_range_label": "1984\u20132014",
+      "tags": [
+        "STD",
+        "STI",
+        "chlamydia",
+        "gonorrhea",
+        "syphilis",
+        "sexually transmitted",
+        "sexual health",
+        "morbidity",
+        "cases"
+      ],
+      "measures": [
+        {
+          "code": "D127.M1",
+          "label": "Count (cases)"
+        },
+        {
+          "code": "D127.M2",
+          "label": "Population"
+        },
+        {
+          "code": "D127.M3",
+          "label": "Rate per 100,000"
+        }
+      ],
+      "key_groupings": [
+        "Disease",
+        "State / STD Region / HHS Region",
+        "Year",
+        "Sex"
+      ],
+      "has_template": false,
+      "has_aar": false,
+      "notes": "Archive data through 2014. Archived versions: D2, D36, D42, D47, D59, D86, D106. For current data, see CDC STI Surveillance Reports."
+    },
+    {
+      "id": "D128",
+      "title": "STD Morbidity by Age, Race, and Sex",
+      "topic": "STI / Sexual Health",
+      "subject": "Sexually transmitted infections stratified by age group, race/ethnicity, and sex for 1996-2014. More detailed demographic breakdown than D127. Covers chlamydia, gonorrhea, and syphilis. Essential for understanding STI disparities by race and age.",
+      "year_start": 1996,
+      "year_end": 2014,
+      "year_range_label": "1996\u20132014",
+      "tags": [
+        "STD",
+        "STI",
+        "chlamydia",
+        "gonorrhea",
+        "syphilis",
+        "age",
+        "race",
+        "sex",
+        "disparity",
+        "sexual health"
+      ],
+      "measures": [
+        {
+          "code": "D128.M1",
+          "label": "Count (cases)"
+        },
+        {
+          "code": "D128.M2",
+          "label": "Population"
+        },
+        {
+          "code": "D128.M3",
+          "label": "Rate per 100,000"
+        }
+      ],
+      "key_groupings": [
+        "Disease",
+        "State",
+        "Year",
+        "Sex",
+        "Race/Ethnicity",
+        "Age Group"
+      ],
+      "has_template": false,
+      "has_aar": false,
+      "notes": "Archive data through 2014. Archived versions: D45, D57, D84, D107, D128."
+    },
+    {
+      "id": "D202",
+      "title": "Tuberculosis (OTIS TB Data)",
+      "topic": "Tuberculosis",
+      "subject": "TB case surveillance from the Online Tuberculosis Information System (OTIS), 1993-2023. Track new TB cases by state, year, age, race/ethnicity, sex, origin of birth (US-born vs. foreign-born), and HIV status. Includes treatment completion and drug susceptibility testing rates.",
+      "year_start": 1993,
+      "year_end": 2023,
+      "year_range_label": "1993\u20132023",
+      "tags": [
+        "tuberculosis",
+        "TB",
+        "OTIS",
+        "infectious disease",
+        "foreign-born",
+        "HIV",
+        "treatment",
+        "drug-resistant",
+        "MDR-TB"
+      ],
+      "measures": [
+        {
+          "code": "D202.M1",
+          "label": "TB Cases"
+        },
+        {
+          "code": "D202.M2",
+          "label": "Percent of Total"
+        },
+        {
+          "code": "D202.M3",
+          "label": "Incidence Rate per 100,000"
+        },
+        {
+          "code": "D202.M7",
+          "label": "Treatment Completion Rate (%)"
+        },
+        {
+          "code": "D202.M9",
+          "label": "% Tested for Drug Susceptibility (Isoniazid)"
+        }
+      ],
+      "key_groupings": [
+        "State",
+        "Year",
+        "Age Group",
+        "Race/Ethnicity (bridged or single)",
+        "Sex",
+        "Origin of Birth (US-born / foreign-born)",
+        "HIV Status",
+        "Years in US"
+      ],
+      "has_template": false,
+      "has_aar": false,
+      "notes": "Most current TB data (2023). Annual archive versions every year from 1993: D4, D15, D26, D34, D38, D49, D55, D78, D96, D108, D123, D131, D135, D147, D156, D165, D175, D186, D193."
+    },
+    {
+      "id": "D133",
+      "title": "Fetal Deaths",
+      "topic": "Fetal Deaths",
+      "subject": "Fetal death (stillbirth) records for 2005-2024, covering 20+ weeks gestation. Track stillbirths by state, cause of death, gestational age, birth weight, delivery method, maternal age, race, and congenital anomalies (Down syndrome, anencephalus, spina bifida, omphalocele).",
+      "year_start": 2005,
+      "year_end": 2024,
+      "year_range_label": "2005\u20132024",
+      "tags": [
+        "fetal death",
+        "stillbirth",
+        "pregnancy loss",
+        "gestational age",
+        "birth weight",
+        "congenital",
+        "maternal",
+        "obstetric",
+        "Down syndrome"
+      ],
+      "measures": [
+        {
+          "code": "D133.M1",
+          "label": "Fetal Deaths"
+        },
+        {
+          "code": "D133.M2",
+          "label": "Percent of Total Deaths"
+        }
+      ],
+      "key_groupings": [
+        "Year / Month",
+        "State",
+        "Gestational Age",
+        "Fetal Sex",
+        "Infant Delivery Weight",
+        "Cause of Death (ICD Chapter)",
+        "Mother's Race / Hispanic Origin",
+        "Mother's Age",
+        "Delivery Method",
+        "Congenital Anomalies (Down Syndrome, Spina Bifida, etc.)",
+        "Maternal Conditions (diabetes, hypertension, eclampsia)"
+      ],
+      "has_template": false,
+      "has_aar": false,
+      "notes": "Use D150 for expanded version (2014+) with maternal education, tobacco, ART, and more detailed variables."
+    },
+    {
+      "id": "D150",
+      "title": "Fetal Deaths, Expanded",
+      "topic": "Fetal Deaths",
+      "subject": "Expanded fetal death (stillbirth) data for 2014-2024 with additional variables: maternal education, tobacco use during pregnancy, prenatal care timing, gestational diabetes, infertility treatments (ART, fertility drugs), prior cesarean, and detailed single-race classification.",
+      "year_start": 2014,
+      "year_end": 2024,
+      "year_range_label": "2014\u20132024",
+      "tags": [
+        "fetal death",
+        "stillbirth",
+        "tobacco",
+        "ART",
+        "infertility",
+        "cesarean",
+        "education",
+        "expanded",
+        "single-race",
+        "gestational diabetes"
+      ],
+      "measures": [
+        {
+          "code": "D150.M1",
+          "label": "Fetal Deaths"
+        },
+        {
+          "code": "D150.M2",
+          "label": "Percent of Total Deaths"
+        }
+      ],
+      "key_groupings": [
+        "Year / Month / Time of Day",
+        "State",
+        "Mother's Single Race / Ethnicity (detailed)",
+        "Mother's Education / Nativity / Country of Birth",
+        "Tobacco Use / Cigarettes per Trimester",
+        "Prenatal Care (trimester began)",
+        "WIC participation",
+        "Infertility Treatment / ART",
+        "Prior Cesarean",
+        "Gestational Age",
+        "Delivery Method",
+        "Cause of Death (ICD Chapter, 124 selected causes)"
+      ],
+      "has_template": false,
+      "has_aar": false,
+      "notes": "Expanded version of D133, only from 2014. Adds ART, tobacco, education, and maternal health detail."
+    },
+    {
+      "id": "D204",
+      "title": "Population Estimates, Single Race",
+      "topic": "Population",
+      "subject": "Annual population estimates by state and county, 2020-2024, using single-race classification. Useful as a population denominator when calculating rates, or for studying demographic distribution by age, sex, race, and ethnicity.",
+      "year_start": 2020,
+      "year_end": 2024,
+      "year_range_label": "2020\u20132024",
+      "tags": [
+        "population",
+        "estimates",
+        "denominator",
+        "census",
+        "race",
+        "age",
+        "county",
+        "single-race"
+      ],
+      "measures": [
+        {
+          "code": "D204.M1",
+          "label": "Population"
+        }
+      ],
+      "key_groupings": [
+        "State / County / Region",
+        "Age Group",
+        "Sex / Gender",
+        "Race",
+        "Ethnicity (Hispanic/Non-Hispanic)",
+        "Year (annual July 1st)"
+      ],
+      "has_template": false,
+      "has_aar": false,
+      "notes": "Denominator data. Historical bridged-race estimates (1990-2020): D1, D5, D9, D24, D32, D37, D44, D52, D82, D92, D99, D116, D129, D134, D143, D154, D163, D178. Other single-race vintages: D142, D148, D155, D164, D166-D171, D184, D185, D190, D191, D196, D197, D203."
+    },
+    {
+      "id": "D178",
+      "title": "Population Estimates, Bridged-Race (1990\u20132020)",
+      "topic": "Population",
+      "subject": "Annual population estimates using the legacy bridged-race classification (4 race categories: White, Black, AIAN, API), 1990-2020. Used as the denominator for bridged-race mortality datasets (D76, D77, D141, D176). County and state level.",
+      "year_start": 1990,
+      "year_end": 2020,
+      "year_range_label": "1990\u20132020",
+      "tags": [
+        "population",
+        "estimates",
+        "denominator",
+        "bridged-race",
+        "historical",
+        "census",
+        "county"
+      ],
+      "measures": [
+        {
+          "code": "D178.M1",
+          "label": "Population"
+        }
+      ],
+      "key_groupings": [
+        "State / County / Region",
+        "Age / Age Group",
+        "Sex",
+        "Race (4 categories)",
+        "Ethnicity",
+        "Year"
+      ],
+      "has_template": false,
+      "has_aar": false,
+      "notes": "Legacy 4-category race system. Pairs with D76, D77, D176 mortality. Use D204 for post-2020 single-race estimates."
+    },
+    {
+      "id": "D117",
+      "title": "National Population Projections",
+      "topic": "Population",
+      "subject": "Census Bureau national population projections by age, sex, race, and ethnicity from 2014 to 2060. Useful for understanding long-term demographic change and projecting future healthcare demand.",
+      "year_start": 2014,
+      "year_end": 2060,
+      "year_range_label": "2014\u20132060",
+      "tags": [
+        "population",
+        "projections",
+        "forecast",
+        "demographics",
+        "future",
+        "census",
+        "age",
+        "race",
+        "long-term"
+      ],
+      "measures": [
+        {
+          "code": "D117.M1",
+          "label": "Projected Population"
+        }
+      ],
+      "key_groupings": [
+        "Year",
+        "Age / Age Group",
+        "Sex",
+        "Race",
+        "Ethnicity"
+      ],
+      "has_template": false,
+      "has_aar": false,
+      "notes": "Projections only. Birth/death/migration components: D118 (by race), D119 (by ethnicity). State-level projections: D7."
+    },
+    {
+      "id": "D12",
+      "title": "AIDS Public Use Data",
+      "topic": "HIV/AIDS",
+      "subject": "AIDS case surveillance data from the early HIV epidemic, covering diagnoses through 1999. Demographic characteristics (age, sex, race/ethnicity) and transmission categories (MSM, IDU, heterosexual, perinatal, blood products). Historical archive of the 1980s-1990s AIDS epidemic.",
+      "year_start": 1981,
+      "year_end": 1999,
+      "year_range_label": "1981\u20131999",
+      "tags": [
+        "AIDS",
+        "HIV",
+        "epidemic",
+        "historical",
+        "transmission",
+        "surveillance",
+        "MSM",
+        "injection drug use"
+      ],
+      "measures": [
+        {
+          "code": "D12.M1",
+          "label": "AIDS Cases"
+        }
+      ],
+      "key_groupings": [
+        "Year",
+        "State",
+        "Age",
+        "Sex",
+        "Race/Ethnicity",
+        "Transmission Category"
+      ],
+      "has_template": false,
+      "has_aar": false,
+      "notes": "Historical only. Vintage 2001 (D13) and 2002 (D14) also available. Current HIV surveillance uses NHSS outside of WONDER."
+    }
+  ]
+}
