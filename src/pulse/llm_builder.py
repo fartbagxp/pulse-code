@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import xml.etree.ElementTree as ET
@@ -16,6 +17,10 @@ from pydantic import BaseModel, Field
 load_dotenv()
 
 _TEMPLATES_DIR = Path(__file__).parent / "templates"
+_QUERIES_DIR = Path(__file__).parent / "queries"
+_QUERIES_INDEX_PATH = Path(__file__).parent / "data" / "queries_index.json"
+
+_dataset_query_index: Optional[dict[str, str]] = None
 
 
 def _build_http_client() -> Optional[httpx.Client]:
@@ -373,9 +378,32 @@ def _build_user_content(
     return "\n\n".join(parts)
 
 
+def _bundled_query_for_dataset(dataset_id: str) -> Optional[str]:
+    """First bundled example query for a dataset, used as a merge target
+    when the dataset has no `{id}-base.xml` template (e.g. D202, D133,
+    D150 — see docs/building-xml-queries.md). Without something to merge
+    onto, required radio-button selectors (O_age, O_race, etc.) go missing
+    and CDC WONDER returns HTTP 500."""
+    global _dataset_query_index
+    if _dataset_query_index is None:
+        raw = json.loads(_QUERIES_INDEX_PATH.read_text())
+        index: dict[str, str] = {}
+        for q in raw["queries"]:
+            index.setdefault(q["dataset_id"], q["filename"])
+        _dataset_query_index = index
+
+    filename = _dataset_query_index.get(dataset_id)
+    if not filename:
+        return None
+    path = _QUERIES_DIR / filename
+    return path.read_text() if path.exists() else None
+
+
 def _load_template(dataset_id: str) -> Optional[str]:
     path = _TEMPLATES_DIR / f"{dataset_id}-base.xml"
-    return path.read_text() if path.exists() else None
+    if path.exists():
+        return path.read_text()
+    return _bundled_query_for_dataset(dataset_id)
 
 
 def _parse_xml_params(xml_str: str) -> list[WonderParam]:
