@@ -3,7 +3,7 @@ requires = ["setuptools==82.0.1"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pulse"
+name = "pulse-code"
 version = "1.0.0"
 description = "CDC WONDER query CLI — explore, build, and refine public health data queries"
 readme = "README.md"
@@ -19,8 +19,17 @@ dependencies = [
     "typer==0.26.8",
 ]
 
+[dependency-groups]
+dev = [
+    "pre-commit==4.6.0",
+    "pytest==9.1.1",
+]
+
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+pulse = ["data/*.json", "templates/*.xml", "queries/*.xml"]
 
 [project.scripts]
 pulse = "pulse.cli:app"
@@ -32,9 +41,3 @@ markers = [
     "integration: exercises real sockets (localhost SOCKS/HTTP servers, or live LLM/CDC WONDER APIs). Excluded by default — run with `-m integration`.",
 ]
 addopts = "-m \"not integration\""
-
-[dependency-groups]
-dev = [
-    "pre-commit==4.6.0",
-    "pytest==9.1.1",
-]
