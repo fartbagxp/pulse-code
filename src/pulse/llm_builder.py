@@ -241,6 +241,15 @@ You are a CDC WONDER query builder. Convert natural language into WONDER API XML
    "opioid deaths vs suicide deaths", "COVID deaths vs flu deaths by state").
    Each sub-query in the comparison gets its own short label, dataset_id, and
    parameters, following the same rules above.
+
+## Dataset-Specific Quirks
+- D128 (STD Morbidity by Age/Race/Sex): the disease filter (V_D128.V3)
+  defaults to *All* (chlamydia + gonorrhea + syphilis together). CDC WONDER
+  requires Disease (D128.V3) to be one of the B_1..B_5 groupings whenever
+  more than one disease is in scope — otherwise it returns HTTP 500 ("must
+  be grouped by Disease when more than one disease is selected"). Either
+  include D128.V3 in the group-by, or restrict V_D128.V3 to a single
+  disease code.
 """
 
 _TOOL_SCHEMA = {
