@@ -360,6 +360,8 @@ def render_example(
     dataset = catalog.get(dataset_id, {})
     tier = complexity_tier(params)
     topic_color = TOPIC_COLORS.get(dataset.get("topic", ""), "#85837e")
+    stem = Path(filename).stem
+    raw_xml = (_QUERIES_DIR / filename).read_text()
 
     other_links = "\n    ".join(
         f'<a href="{Path(s["filename"]).stem}.html">{html.escape(s["description"])}</a>'
@@ -391,6 +393,7 @@ def render_example(
     <span>&middot;</span>
     <span>{html.escape(dataset.get("year_range_label", ""))}</span>
   </p>
+  <a class="download-btn" href="{stem}.xml" download>Download {stem}.xml</a>
 </section>
 
 <section class="chapter">
@@ -398,6 +401,11 @@ def render_example(
   <div class="query code-pill">
     {lines}
   </div>
+</section>
+
+<section class="chapter chapter--tight">
+  <p class="ch-kicker">Raw XML — what actually gets sent</p>
+  <pre class="code-pill xml-raw">{html.escape(raw_xml)}</pre>
 </section>
 {sibling_block}
 """
@@ -561,6 +569,18 @@ footer {
 .hero-p { color: var(--t3); font-size: 1rem; line-height: 1.7; max-width: 640px; margin-bottom: 1.75rem; }
 .hero-meta { display: flex; align-items: center; gap: .6rem; color: var(--t3); font-size: .85rem; margin-top: 1rem; }
 .hero--example { padding-bottom: 2rem; }
+.download-btn {
+  display: inline-flex; align-items: center; gap: .5rem;
+  margin-top: 1.5rem; padding: .65rem 1.1rem;
+  background: rgb(var(--theme)); color: #fff; font-size: .82rem; font-weight: 700;
+  border-radius: 8px; text-decoration: none; transition: opacity .15s;
+}
+.download-btn:hover { opacity: .85; }
+.download-btn:before { content: "↓"; }
+.xml-raw {
+  color: var(--t2); font-size: .74rem; line-height: 1.7;
+  max-height: 480px; overflow: auto; white-space: pre;
+}
 
 .code-pill {
   background: var(--bg2); border: 1px solid var(--rim); border-radius: 10px;
@@ -673,11 +693,14 @@ def main() -> None:
 
     for ds_id, ds_queries in by_dataset.items():
         for q in ds_queries:
-            out_name = f"{Path(q['filename']).stem}.html"
-            (examples_dir / out_name).write_text(
+            stem = Path(q["filename"]).stem
+            (examples_dir / f"{stem}.html").write_text(
                 render_example(q, catalog, ds_queries, variable_labels)
             )
-            print(f"wrote examples/{out_name}")
+            (examples_dir / f"{stem}.xml").write_text(
+                (_QUERIES_DIR / q["filename"]).read_text()
+            )
+            print(f"wrote examples/{stem}.html + {stem}.xml")
 
 
 if __name__ == "__main__":
