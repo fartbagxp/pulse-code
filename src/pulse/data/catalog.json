@@ -1299,7 +1299,7 @@
         "Race/Ethnicity",
         "Age Group"
       ],
-      "has_template": false,
+      "has_template": true,
       "has_aar": false,
       "notes": "Archive data through 2014. Archived versions: D45, D57, D84, D107, D128."
     },
@@ -1484,7 +1484,7 @@
         "Ethnicity (Hispanic/Non-Hispanic)",
         "Year (annual July 1st)"
       ],
-      "has_template": false,
+      "has_template": true,
       "has_aar": false,
       "notes": "Denominator data. Historical bridged-race estimates (1990-2020): D1, D5, D9, D24, D32, D37, D44, D52, D82, D92, D99, D116, D129, D134, D143, D154, D163, D178. Other single-race vintages: D142, D148, D155, D164, D166-D171, D184, D185, D190, D191, D196, D197, D203."
     },
@@ -1519,7 +1519,7 @@
         "Ethnicity",
         "Year"
       ],
-      "has_template": false,
+      "has_template": true,
       "has_aar": false,
       "notes": "Legacy 4-category race system. Pairs with D76, D77, D176 mortality. Use D204 for post-2020 single-race estimates."
     },
@@ -1555,7 +1555,7 @@
         "Race",
         "Ethnicity"
       ],
-      "has_template": false,
+      "has_template": true,
       "has_aar": false,
       "notes": "Projections only. Birth/death/migration components: D118 (by race), D119 (by ethnicity). State-level projections: D7."
     },
