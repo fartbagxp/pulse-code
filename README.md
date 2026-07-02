@@ -1,10 +1,10 @@
 # Pulse
 
-[![PyPI](https://img.shields.io/pypi/v/pulse-code)](https://pypi.org/project/pulse-code/)
-[![Python versions](https://img.shields.io/badge/python-3.14%2B-blue)](https://pypi.org/project/pulse-code/)
-[![Publish](https://github.com/fartbagxp/pulse-code/actions/workflows/publish.yml/badge.svg)](https://github.com/fartbagxp/pulse-code/actions/workflows/publish.yml)
-[![Pages](https://github.com/fartbagxp/pulse-code/actions/workflows/pages.yml/badge.svg)](https://github.com/fartbagxp/pulse-code/actions/workflows/pages.yml)
-[![License](https://img.shields.io/github/license/fartbagxp/pulse-code)](LICENSE)
+[![PyPI](https://img.shields.io/pypi/v/pulse-code?style=for-the-badge)](https://pypi.org/project/pulse-code/)
+[![Python versions](https://img.shields.io/badge/python-3.14%2B-blue?style=for-the-badge)](https://pypi.org/project/pulse-code/)
+[![Publish](https://img.shields.io/github/actions/workflow/status/fartbagxp/pulse-code/publish.yml?style=for-the-badge&label=publish)](https://github.com/fartbagxp/pulse-code/actions/workflows/publish.yml)
+[![Pages](https://img.shields.io/github/actions/workflow/status/fartbagxp/pulse-code/pages.yml?style=for-the-badge&label=pages)](https://github.com/fartbagxp/pulse-code/actions/workflows/pages.yml)
+[![License](https://img.shields.io/github/license/fartbagxp/pulse-code?style=for-the-badge)](LICENSE)
 
 CDC WONDER public health query CLI — explore datasets, run bundled queries, and use Claude to build and refine custom XML queries for public health data that Americans should care about.
 
