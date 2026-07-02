@@ -6,7 +6,7 @@
 [![Pages](https://img.shields.io/github/actions/workflow/status/fartbagxp/pulse-code/pages.yml?style=for-the-badge&label=pages)](https://fartbagxp.github.io/pulse-code/)
 [![License](https://img.shields.io/badge/license-CC0--1.0-blue?style=for-the-badge)](LICENSE)
 
-CDC WONDER public health query CLI — explore datasets, run bundled queries, and use Claude to build and refine custom XML queries for public health data that Americans should care about.
+CDC WONDER public health query CLI. Explore datasets, run bundled queries, and use Claude to build and refine custom XML queries for public health data that Americans should care about.
 
 ## What is this?
 
@@ -42,7 +42,7 @@ OpenAI Foundry deployment (e.g. GPT-5.4). Select the provider with
 `LLM_PROVIDER` (defaults to `anthropic`):
 
 ```bash
-# Anthropic (default) — needs ANTHROPIC_API_KEY as above
+# Anthropic (default), needs ANTHROPIC_API_KEY as above
 
 # Azure OpenAI Foundry
 export LLM_PROVIDER=azure_openai
@@ -56,8 +56,8 @@ All four `AZURE_OPENAI_*` variables are required when `LLM_PROVIDER=azure_openai
 `pulse` will tell you which ones are missing. These can also go in a `.env`
 file alongside `ANTHROPIC_API_KEY`.
 
-If the LLM endpoint isn't directly reachable — e.g. an Azure OpenAI resource
-with public network access disabled, requiring a private endpoint — bridge
+If the LLM endpoint isn't directly reachable (e.g. an Azure OpenAI resource
+with public network access disabled, requiring a private endpoint), bridge
 the connection through a proxy with `LLM_HTTP_PROXY`. Applies to both
 providers, and supports `http://`, `https://`, `socks5://`, and `socks5h://`
 (DNS resolved through the proxy):
@@ -155,7 +155,7 @@ pulse refine drug-deaths-by-year-2018-2024-req.xml "show monthly not yearly" --r
 ## Testing
 
 ```bash
-uv run pytest                  # unit tests only — fast, no network (default)
+uv run pytest                  # unit tests only, fast, no network (default)
 uv run pytest -m integration   # + integration tests (see below)
 ```
 
@@ -166,26 +166,26 @@ selection, and the offline-network-free CLI commands.
 Integration tests (`tests/integration/`) are excluded by default and split
 into two kinds:
 
-- **`test_socks_proxy_integration.py`** — always runs. Spins up a local
-  SOCKS5 relay and a local mock LLM HTTP server, so it genuinely exercises
+- **`test_socks_proxy_integration.py`**: always runs. Spins up a local
+  SOCKS5 relay and a local mock LLM HTTP server, so it actually exercises
   `LLM_HTTP_PROXY` end-to-end (real SOCKS handshake, real HTTP
   request/response) without needing real Azure/Anthropic credentials.
-- **`test_llm_provider_live.py`** — hits whatever `ANTHROPIC_API_KEY` /
+- **`test_llm_provider_live.py`**: hits whatever `ANTHROPIC_API_KEY` /
   `LLM_PROVIDER=azure_openai` + `AZURE_OPENAI_*` / `LLM_HTTP_PROXY` you
   actually have configured. Skips if credentials aren't set; also skips
   (rather than fails) if the provider is reachable but blocked at the
   network layer (e.g. an Azure OpenAI resource with public access disabled
-  and no working proxy) — that's an environment gap, not a code defect.
+  and no working proxy). That's an environment gap, not a code defect.
 
 ## Bundled Datasets (with base templates)
 
 | ID | Subject | Years |
 |----|---------|-------|
-| D176 | Provisional mortality — opioids, COVID, suicide, heart disease | 2018–present |
+| D176 | Provisional mortality: opioids, COVID, suicide, heart disease | 2018–present |
 | D157 | Final mortality, single race (MCD+UCD) | 2018–2023 |
-| D158 | Underlying cause of death, single race — maternal mortality | 2018–2023 |
-| D77 | Multiple cause of death — drug deaths (historical) | 1999–2020 |
-| D76 | Underlying cause of death — suicide, cancer (historical) | 1999–2020 |
+| D158 | Underlying cause of death, single race: maternal mortality | 2018–2023 |
+| D77 | Multiple cause of death: drug deaths (historical) | 1999–2020 |
+| D76 | Underlying cause of death: suicide, cancer (historical) | 1999–2020 |
 | D141 | MCD with US-Mexico border regions | 1999–2020 |
 | D140 | Compressed mortality ICD-10 | 1999–2016 |
 | D16 | Compressed mortality ICD-9 | 1979–1998 |
@@ -193,7 +193,7 @@ into two kinds:
 | D69 | Linked birth/infant death records | 2007–2023 |
 | D159 | Linked birth/infant death, expanded race | 2017–2023 |
 | D31/D18/D23 | Linked birth/infant death (historical) | 1995–2006 |
-| D66 | Natality — birth rates, birth outcomes | 2007–2024 |
+| D66 | Natality: birth rates, birth outcomes | 2007–2024 |
 | D149 | Natality, expanded race detail | 2016–2024 |
 | D192 | Provisional natality (monthly) | 2023–present |
 | D27/D10 | Natality (historical) | 1995–2006 |
@@ -224,13 +224,13 @@ per tag) handles the rest as three sequential jobs:
 3. **`build`** builds the sdist/wheel, failing fast if the tag doesn't match
    `pyproject.toml`'s version.
 4. **`release`** (needs `build`) creates the GitHub Release with the built
-   artifacts attached — the source of truth for what shipped.
+   artifacts attached, the source of truth for what shipped.
 5. **`publish`** (needs `release`) publishes those same artifacts to PyPI
    (`pulse-code`) via trusted publishing (OIDC) against the `prod`
-   environment — no API tokens stored in the repo.
+   environment, with no API tokens stored in the repo.
 
-The `needs:` chain means a failure at any step blocks everything after it —
-e.g. a PyPI hiccup can't leave a GitHub Release around for a package that
+The `needs:` chain means a failure at any step blocks everything after it.
+For example, a PyPI hiccup can't leave a GitHub Release around for a package that
 isn't actually installable. If the `publish` job fails after `release`
 succeeds, use "Re-run failed jobs" on that workflow run rather than
 re-tagging. PyPI publishing is immutable: once a version is published it
@@ -238,4 +238,4 @@ can't be re-uploaded, so a bad release means bumping to a new version.
 
 ## Based On
 
-Built using [fartbagxp/health](https://github.com/fartbagxp/health) as reference — a comprehensive collection of CDC data pipelines and the CDC WONDER XML API client and LLM query builder this tool builds on.
+Built using [fartbagxp/health](https://github.com/fartbagxp/health) as reference, a collection of CDC data pipelines and the CDC WONDER XML API client and LLM query builder this tool builds on.

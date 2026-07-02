@@ -1,6 +1,6 @@
 # Building CDC WONDER XML Queries From Scratch
 
-This documents what we learned building queries for datasets that have no existing templates or examples — specifically D202 (Tuberculosis), D133 (Fetal Deaths), and D150 (Expanded Fetal Deaths).
+This documents what we learned building queries for datasets that have no existing templates or examples: specifically D202 (Tuberculosis), D133 (Fetal Deaths), and D150 (Expanded Fetal Deaths).
 
 ## The XML Parameter Structure
 
@@ -21,19 +21,19 @@ A CDC WONDER XML query is a flat list of `<parameter>` elements, each with `<nam
 
 Each `query_params_D*.json` file in `health/data/raw/wonder/` was scraped from the CDC WONDER request form. It contains two sections:
 
-- **`selects`** — every dropdown on the form. If the `name` starts with `F_`, it's a finder-stage select (hierarchical); if it starts with `V_`, it's a regular filter dropdown.
-- **`inputs`** — checkboxes, radio buttons, hidden fields, and submit buttons.
+- **`selects`**: every dropdown on the form. If the `name` starts with `F_`, it's a finder-stage select (hierarchical); if it starts with `V_`, it's a regular filter dropdown.
+- **`inputs`**: checkboxes, radio buttons, hidden fields, and submit buttons.
 
 ### Finding required parameters
 
 1. **Group-by variables:** Look at `selects` where `name = "B_1"`. The `value` field of each `option` is what you put in the XML (e.g., `D202.V20` for Year).
 
-2. **Measures:** Look at `inputs` where `type = "input_checkbox"` and `name` starts with `M_`. Also check `input_hidden` for M_* fields — those are always submitted and must be included in the XML.
+2. **Measures:** Look at `inputs` where `type = "input_checkbox"` and `name` starts with `M_`. Also check `input_hidden` for M_* fields: those are always submitted and must be included in the XML.
 
-3. **Radio button O_* parameters:** Look at `inputs` where `type = "input_radio"`. These are **required** — if you omit them, CDC WONDER returns HTTP 500. Use the first option's `value` as a safe default.
+3. **Radio button O_* parameters:** Look at `inputs` where `type = "input_radio"`. These are **required**: if you omit them, CDC WONDER returns HTTP 500. Use the first option's `value` as a safe default.
 
 4. **Finder-stage F_* and I_* parameters:** Look at `inputs` where `type = "input_hidden"` and `name` starts with `finder-stage-`. For each `finder-stage-D***.V##`, you need:
-   - `F_D***.V## = *All*` (the filter select — gets the corresponding `selects` entry whose `name` starts with `F_`)
+   - `F_D***.V## = *All*` (the filter select, which gets the corresponding `selects` entry whose `name` starts with `F_`)
    - `I_D***.V## = ""` (empty text input companion)
    - `O_V##_fmode = freg` (tells WONDER to use regular filter mode)
    - `finder-stage-D***.V## = codeset` (declares codeset mode)
@@ -48,7 +48,7 @@ CDC WONDER's response when radio buttons are missing:
 <message>To Group Results By {0} you must also select the {1} button where found below section #1.</message>
 ```
 
-The `{0}` and `{1}` are unfilled Java template placeholders — CDC's error rendering is broken, so you won't know *which* radio group is missing. Each occurrence of this message in the response corresponds to one missing radio button group.
+The `{0}` and `{1}` are unfilled Java template placeholders. CDC's error rendering is broken, so you won't know *which* radio group is missing. Each occurrence of this message in the response corresponds to one missing radio button group.
 
 **Fix:** Find all `input_radio` elements in the dataset's `query_params` JSON and include one value per group:
 
@@ -77,7 +77,7 @@ Use the first `value` for each `name` group as the default. Common ones:
 
 ## What M_* (Measures) to Include
 
-Always check `input_hidden` entries in the `inputs` list — these are submitted by the HTML form automatically and must be mirrored in the XML:
+Always check `input_hidden` entries in the `inputs` list: these are submitted by the HTML form automatically and must be mirrored in the XML:
 
 ```
 M_1 type=input_hidden value=D202.M1
@@ -118,8 +118,8 @@ The simplest working query for "TB cases by year" needs:
 
 1. `B_1 = D202.V20` (group by Year)
 2. `B_2` through `B_5 = *None*`
-3. `M_1 = D202.M1`, `M_2 = D202.M2` (mandatory hidden measures), `M_3 = D202.M3` (rate — optional but useful)
-4. `O_age = D202.V1`, `O_race = D202.V16` (radio buttons — required)
+3. `M_1 = D202.M1`, `M_2 = D202.M2` (mandatory hidden measures), `M_3 = D202.M3` (rate, optional but useful)
+4. `O_age = D202.V1`, `O_race = D202.V16` (radio buttons, required)
 5. All `V_D202.V*` filters set to `*All*`
 6. Boilerplate: `dataset_code = D202`, `dataset_label`, `stage = request`, `action-Send = Send`
 
@@ -127,7 +127,7 @@ D202 has no finder-stage variables, so no `F_*`/`I_*` needed.
 
 ## Example: Fetal Deaths by Cause (D150)
 
-D150 is the most complex — 91 group-by options, 9 radio button groups, 5 finder-stage variables. Extra requirements beyond D133:
+D150 is the most complex: 91 group-by options, 9 radio button groups, 5 finder-stage variables. Extra requirements beyond D133:
 
 - `F_D150.V107 = *All*` + `I_D150.V107 = ""` + `finder-stage-D150.V107 = codeset` + `O_V107_fmode = freg` (the ICD cause-of-death codeset)
 - `O_icd = D150.V107` to select ICD-10 codes (vs. 124 Selected Causes)
@@ -140,9 +140,9 @@ When grouping by `D150.V107-level1` (ICD Chapter), the `O_icd = D150.V107` radio
 1. Find the `query_params_D***.json` file in `health/data/raw/wonder/`
 2. Extract group-by options: `selects` where `name = "B_1"`
 3. Extract mandatory measures: `inputs` where `type = "input_hidden"` and `name` starts with `M_`
-4. Extract required radio buttons: `inputs` where `type = "input_radio"` — one per group
+4. Extract required radio buttons: `inputs` where `type = "input_radio"`, one per group
 5. Extract finder-stage variables: `inputs` where `type = "input_hidden"` and `name` starts with `finder-stage-`
 6. Build V_* filter list from `selects` where `name` starts with `V_` (set all to `*All*`)
 7. Build F_* list from `selects` where `name` starts with `F_` (set all to `*All*`)
 8. Add boilerplate: `dataset_code`, `dataset_label`, `stage`, `action-Send`
-9. Test — watch for HTTP 500 with unfilled `{0}` placeholders (missing radio buttons)
+9. Test, and watch for HTTP 500 with unfilled `{0}` placeholders (missing radio buttons)

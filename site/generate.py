@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Generate the static site explaining CDC WONDER XML query structure.
 
-Pure stdlib — no runtime dependency on the pulse package or anthropic.
+Pure stdlib, no runtime dependency on the pulse package or anthropic.
 Reads real bundled queries + the dataset catalog so the site can't drift
 from what the CLI actually produces.
 
-Look and feel is modeled on https://fartbagxp.github.io/venture/ — same
+Look and feel is modeled on https://fartbagxp.github.io/venture/: same
 CSS custom properties, font stack, and component patterns (nav, hero
 kicker, code-pill, chapter sections).
 """
@@ -26,30 +26,30 @@ _QUERIES_INDEX_PATH = _REPO_ROOT / "src" / "pulse" / "data" / "queries_index.jso
 _VARIABLE_LABELS_PATH = _REPO_ROOT / "src" / "pulse" / "data" / "variable_labels.json"
 _DIST_DIR = _SITE_DIR / "dist"
 
-# Plain-English explanations for boilerplate parameters — not tied to any
+# Plain-English explanations for boilerplate parameters, not tied to any
 # specific dataset variable.
 BOILERPLATE_HELP = {
     "action-Send": "Submit trigger. CDC WONDER only processes the request when this is present with value 'Send'.",
     "dataset_code": "Which CDC WONDER dataset to query (e.g. D202 for Tuberculosis).",
     "dataset_label": "Human-readable dataset name, echoed back in the response header.",
-    "dataset_vintage": "Dataset revision/vintage identifier — usually left blank.",
+    "dataset_vintage": "Dataset revision/vintage identifier, usually left blank.",
     "dataset_vintage_latest": "Which vintage (version) of this dataset to use.",
-    "stage": "Always 'request' — tells WONDER this is a data request, not a form page render.",
+    "stage": "Always 'request'. Tells WONDER this is a data request, not a form page render.",
 }
 
 # Plain-English explanations for common O_* output/mode options that aren't
 # themselves a reference to a dataset variable.
 O_HELP = {
-    "O_rate_per": "Denominator for computed rates — e.g. 100000 means 'per 100,000 people'.",
+    "O_rate_per": "Denominator for computed rates, e.g. 100000 means 'per 100,000 people'.",
     "O_show_totals": "Whether to include a grand-total row in the results.",
     "O_show_zeros": "Whether to include rows where the count is zero.",
     "O_show_suppressed": "Whether to include rows CDC suppressed for small counts (shown as 'Suppressed', not a real number).",
     "O_precision": "How many decimal places to show on computed rates.",
     "O_timeout": "Server-side timeout for the request, in seconds.",
-    "O_javascript": "Internal form flag copied from the web UI — always 'on'.",
+    "O_javascript": "Internal form flag copied from the web UI, always 'on'.",
     "O_export-format": "File format used when exporting results (e.g. xls).",
     "O_title": "Optional custom title for the result set.",
-    "O_oc-sect1-request": "Internal UI state for the request form's collapsible section — has no effect on the data.",
+    "O_oc-sect1-request": "Internal UI state for the request form's collapsible section, has no effect on the data.",
     "O_aar_enable": "Whether to calculate Age-Adjusted Rate. Must be 'false' when grouping by age.",
     "O_aar": "Which Age-Adjusted Rate standard population to use.",
     "O_aar_CI": "Whether to include confidence intervals on the Age-Adjusted Rate.",
@@ -74,7 +74,7 @@ class Category:
         return name.startswith(f"{self.key}_")
 
 
-# Source of truth for both the legend and the per-line highlighting —
+# Source of truth for both the legend and the per-line highlighting,
 # transcribed from docs/building-xml-queries.md.
 CATEGORIES: list[Category] = [
     Category(
@@ -174,7 +174,7 @@ def explain_parameter(
     variable_labels: dict[str, dict[str, str]],
     catalog: dict[str, dict],
 ) -> str:
-    """Plain-English explanation of what this exact parameter does — not
+    """Plain-English explanation of what this exact parameter does: not
     just its category, but what B_1=D202.V20 actually means (Year)."""
 
     def lookup(code: str) -> str | None:
@@ -193,7 +193,7 @@ def explain_parameter(
     if cat.key == "B":
         if val == "*None*":
             return (
-                "Unused group-by slot — this row won't be split out by anything extra."
+                "Unused group-by slot. This row won't be split out by anything extra."
             )
         label = lookup(val) or val
         return f"Splits the results out by {label}."
@@ -202,11 +202,11 @@ def explain_parameter(
         code = name.split("_", 1)[1] if "_" in name else name
         label = lookup(code) or code
         if cat.key == "F":
-            return f"Filter picker for {label} — lets you narrow results down to specific {label.lower()} values before sending the request."
+            return f"Filter picker for {label}, lets you narrow results down to specific {label.lower()} values before sending the request."
         if cat.key == "I":
             return f"Blank text box paired with the {label} filter above, for typing a custom search term."
         if val == "*All*" or not val:
-            return f"Filter on {label}: not restricted here — every value is included."
+            return f"Filter on {label}: not restricted here, every value is included."
         shown = ", ".join(values[:5]) + ("…" if len(values) > 5 else "")
         return f"Filter on {label}, restricted to: {shown}."
 
@@ -232,10 +232,10 @@ def explain_parameter(
             return "Tells WONDER to use the standard filter mode for the paired finder variable above."
         label = lookup(val)
         if label:
-            return f"Required selection — tells WONDER to use {label} here. Missing this causes an HTTP 500 error."
+            return f"Required selection: tells WONDER to use {label} here. Missing this causes an HTTP 500 error."
         return "A required output setting or radio-button selection for this dataset."
 
-    return BOILERPLATE_HELP.get(name, "Required request metadata — always sent as-is.")
+    return BOILERPLATE_HELP.get(name, "Required request metadata, always sent as-is.")
 
 
 def queries_by_dataset(queries: list[dict]) -> dict[str, list[dict]]:
@@ -405,7 +405,7 @@ def render_example(
 </section>
 
 <section class="chapter chapter--tight">
-  <p class="ch-kicker">Raw XML — what actually gets sent</p>
+  <p class="ch-kicker">Raw XML: what actually gets sent</p>
   <pre class="code-pill xml-raw">{html.escape(raw_xml)}</pre>
 </section>
 {sibling_block}
@@ -476,7 +476,7 @@ def render_index(catalog: dict, by_dataset: dict[str, list[dict]]) -> str:
   <p class="hero-p">
     A CDC WONDER API request is a flat list of <code>&lt;parameter&gt;</code>
     elements with cryptic names like <code>B_1</code> or <code>F_D202.V20</code>.
-    This is a reference for reviewing or building those requests — color-coded
+    This is a reference for reviewing or building those requests, color-coded
     by category, with a plain-English explanation for every parameter in
     every bundled query from the
     <a href="https://github.com/fartbagxp/pulse-code" target="_blank">pulse</a> CLI.
@@ -499,7 +499,7 @@ def render_index(catalog: dict, by_dataset: dict[str, list[dict]]) -> str:
 <section class="chapter" id="datasets">
   <p class="ch-kicker">{len(catalog)} Datasets &middot; {total_queries} Bundled Queries</p>
   <h2 class="ch-h">Dataset overview.</h2>
-  <p class="ch-p">Same summary as <code>uv run pulse datasets</code> — every dataset pulse knows about, and whether there's an annotated example to look at.</p>
+  <p class="ch-p">Same summary as <code>uv run pulse datasets</code>: every dataset pulse knows about, and whether there's an annotated example to look at.</p>
   <div class="table-wrap">
     <table>
       <thead>
@@ -534,14 +534,14 @@ def render_usage() -> str:
     pulse has two halves: a light half for finding and running datasets
     you already know how to describe, and a heavier half that hands your
     request to an LLM to write the CDC WONDER XML for you. Start with the
-    light half — it's faster, free, and works offline.
+    light half. It's faster, free, and works offline.
   </p>
 </section>
 
 <section class="chapter">
   <p class="ch-kicker">1 · Setup</p>
   <h2 class="ch-h">Install it.</h2>
-  <p class="ch-p">Requires Python 3.12+. The LLM-backed commands (further down this page) also need a provider key — everything else works without one.</p>
+  <p class="ch-p">Requires Python 3.12+. The LLM-backed commands (further down this page) also need a provider key; everything else works without one.</p>
 """
         + cmd("uv sync")
         + """
@@ -560,11 +560,11 @@ def render_usage() -> str:
 </section>
 
 <section class="chapter">
-  <p class="ch-kicker">2 · Light usage — finding a dataset</p>
+  <p class="ch-kicker">2 · Light usage: finding a dataset</p>
   <h2 class="ch-h">Figure out what's available.</h2>
-  <p class="ch-p">No LLM needed for any of this — it's all local keyword matching over the bundled dataset catalog.</p>
+  <p class="ch-p">No LLM needed for any of this: it's all local keyword matching over the bundled dataset catalog.</p>
 
-  <p class="ch-p"><strong style="color:var(--t)">See everything</strong> — every dataset pulse knows, grouped by topic:</p>
+  <p class="ch-p"><strong style="color:var(--t)">See everything</strong>: every dataset pulse knows, grouped by topic:</p>
 """
         + cmd(
             "pulse datasets\n"
@@ -572,7 +572,7 @@ def render_usage() -> str:
             "pulse topics                       # just the topic list + counts"
         )
         + """
-  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">Search by plain description</strong> — matches datasets and bundled queries by keyword/synonym, no LLM call:</p>
+  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">Search by plain description</strong>: matches datasets and bundled queries by keyword/synonym, no LLM call:</p>
 """
         + cmd(
             'pulse search "opioid overdose deaths by state"\n'
@@ -580,15 +580,15 @@ def render_usage() -> str:
             'pulse search "tick-borne disease cases" --queries      # bundled queries only'
         )
         + """
-  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">Drill into one dataset</strong> — measures, grouping dimensions, bundled examples:</p>
+  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">Drill into one dataset</strong>: measures, grouping dimensions, bundled examples:</p>
 """
         + cmd("pulse info D176")
         + """
-  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">List the bundled example queries</strong> — 36 working queries, ready to run as-is:</p>
+  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">List the bundled example queries</strong>: 36 working queries, ready to run as-is:</p>
 """
         + cmd("pulse list-queries\npulse list-queries --dataset D176")
         + """
-  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">Run one</strong> — hits the live CDC WONDER API (respects its 15s rate limit):</p>
+  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">Run one</strong>: hits the live CDC WONDER API (respects its 15s rate limit):</p>
 """
         + cmd(
             "pulse run drug-deaths-by-year-2018-2024-req.xml\n"
@@ -598,17 +598,17 @@ def render_usage() -> str:
 </section>
 
 <section class="chapter">
-  <p class="ch-kicker">3 · Heavier usage — natural language queries</p>
+  <p class="ch-kicker">3 · Heavier usage: natural language queries</p>
   <h2 class="ch-h">Ask for something that doesn't exist yet.</h2>
   <p class="ch-p">
     These commands call an LLM (Claude or Azure OpenAI, per your <code>LLM_PROVIDER</code>)
     to turn a plain-English request into CDC WONDER XML. It grounds each request in
-    the closest matching bundled queries — the same examples shown on this site —
+    the closest matching bundled queries (the same examples shown on this site),
     so the generated XML follows real, working parameter combinations instead of
     guessing from scratch.
   </p>
 
-  <p class="ch-p"><strong style="color:var(--t)">Build XML without running it</strong> — inspect or save it first:</p>
+  <p class="ch-p"><strong style="color:var(--t)">Build XML without running it</strong>: inspect or save it first:</p>
 """
         + cmd(
             'pulse build "drug overdose deaths by state and year 2018-2023"\n'
@@ -619,7 +619,7 @@ def render_usage() -> str:
 """
         + cmd('pulse query "fentanyl deaths by state 2020-2024" -f csv')
         + """
-  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">Refine an existing query with feedback</strong> — starts from real XML (a bundled query or a file you built earlier) instead of a blank prompt:</p>
+  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">Refine an existing query with feedback</strong>: starts from real XML (a bundled query or a file you built earlier) instead of a blank prompt:</p>
 """
         + cmd(
             'pulse refine opioid-overdose-deaths-2018-2024-req.xml "break it down by state"\n'
@@ -632,7 +632,7 @@ def render_usage() -> str:
   <p class="ch-kicker">4 · The complicated cases</p>
   <h2 class="ch-h">Comparisons and multi-turn conversations.</h2>
 
-  <p class="ch-p"><strong style="color:var(--t)">Compare two or more causes/datasets side by side</strong> — the LLM decides this needs multiple sub-queries, builds each one, and runs them in sequence (respecting CDC's rate limit between calls):</p>
+  <p class="ch-p"><strong style="color:var(--t)">Compare two or more causes/datasets side by side</strong>: the LLM decides this needs multiple sub-queries, builds each one, and runs them in sequence (respecting CDC's rate limit between calls):</p>
 """
         + cmd(
             'pulse compare "opioid overdose deaths vs suicide deaths by state 2018-2023"'
@@ -640,7 +640,7 @@ def render_usage() -> str:
         + """
   <p class="ch-p" style="margin-top:1.5rem">If a request turns out not to be a comparison, <code>compare</code> falls back to running it as a single query and tells you so.</p>
 
-  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">Iterate conversationally</strong> — a REPL that keeps the current XML in memory across turns, so each follow-up refines what came before instead of starting over:</p>
+  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">Iterate conversationally</strong>: a REPL that keeps the current XML in memory across turns, so each follow-up refines what came before instead of starting over:</p>
 """
         + cmd(
             'pulse chat "drug overdose deaths by year 2018-2024"\n\n'
