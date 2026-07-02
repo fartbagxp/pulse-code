@@ -1,4 +1,10 @@
-# pulse
+# Pulse
+
+[![PyPI](https://img.shields.io/pypi/v/pulse-code)](https://pypi.org/project/pulse-code/)
+[![Python versions](https://img.shields.io/pypi/pyversions/pulse-code)](https://pypi.org/project/pulse-code/)
+[![Publish](https://github.com/fartbagxp/pulse-code/actions/workflows/publish.yml/badge.svg)](https://github.com/fartbagxp/pulse-code/actions/workflows/publish.yml)
+[![Pages](https://github.com/fartbagxp/pulse-code/actions/workflows/pages.yml/badge.svg)](https://github.com/fartbagxp/pulse-code/actions/workflows/pages.yml)
+[![License: CC0-1.0](https://img.shields.io/pypi/l/pulse-code)](LICENSE)
 
 CDC WONDER public health query CLI — explore datasets, run bundled queries, and use Claude to build and refine custom XML queries for public health data that Americans should care about.
 
@@ -17,7 +23,10 @@ CDC WONDER public health query CLI — explore datasets, run bundled queries, an
 ## Setup
 
 ```bash
-# Install (requires Python 3.12+)
+# From PyPI (requires Python 3.14+)
+pip install pulse-code
+
+# Or from source
 uv sync
 
 # For build/query/refine/compare/chat commands, set your Anthropic API key:
