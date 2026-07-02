@@ -6,6 +6,7 @@ import csv
 import io
 import json
 import sys
+import time
 from pathlib import Path
 from typing import Annotated, Optional
 
@@ -13,6 +14,7 @@ import typer
 from rich import box
 from rich.console import Console
 from rich.panel import Panel
+from rich.prompt import Prompt
 from rich.table import Table
 from rich.text import Text
 
@@ -38,6 +40,39 @@ def _get_catalog() -> Catalog:
     if _catalog is None:
         _catalog = Catalog()
     return _catalog
+
+
+def _print_missing_provider_package(error: ImportError) -> None:
+    err.print(f"[red]Missing package for the configured LLM provider: {error}[/red]")
+    err.print(
+        "[dim]Anthropic needs `anthropic`; Azure OpenAI needs `openai` "
+        "(both are pulse dependencies — try `uv sync`).[/dim]"
+    )
+
+
+def _print_missing_api_key() -> None:
+    err.print("[red]No credentials found for the configured LLM provider.[/red]")
+    err.print(
+        "[dim]Set [bold]ANTHROPIC_API_KEY[/bold] (default provider), or "
+        "[bold]LLM_PROVIDER=azure_openai[/bold] plus [bold]AZURE_OPENAI_API_KEY[/bold], "
+        "[bold]AZURE_OPENAI_ENDPOINT[/bold], [bold]AZURE_OPENAI_DEPLOYMENT[/bold], "
+        "[bold]AZURE_OPENAI_API_VERSION[/bold].[/dim]"
+    )
+
+
+def _reference_queries(
+    prompt: str, catalog: Catalog, top_n: int = 2, min_score: float = 0.10
+) -> list[tuple[str, str]]:
+    """Find the closest bundled queries to a prompt and load their XML as few-shot context."""
+    matches = match_queries(prompt, catalog, top_n=top_n)
+    refs = []
+    for m in matches:
+        if m.score < min_score:
+            continue
+        path = _QUERIES_DIR / m.query.filename
+        if path.exists():
+            refs.append((m.query.description, path.read_text()))
+    return refs
 
 
 # ── datasets ──────────────────────────────────────────────────────────────────
@@ -372,29 +407,29 @@ def cmd_build(
             console.print()
 
     console.print(f"[bold]Building query:[/bold] {prompt!r}")
-    console.print("[dim]Calling Claude…[/dim]\n")
-
-    try:
-        from pulse.llm_builder import LLMQueryBuilder
-    except ImportError:
-        err.print(
-            "[red]anthropic package not installed. Run: uv pip install anthropic[/red]"
-        )
-        raise typer.Exit(1)
+    console.print("[dim]Calling the LLM…[/dim]\n")
 
     def _on_thinking(text: str) -> None:
         if verbose and text.strip():
             console.print(f"[dim italic]{text[:200]}…[/dim italic]")
 
-    builder = LLMQueryBuilder()
+    refs = _reference_queries(prompt, catalog)
     try:
-        request = builder.build(prompt, on_thinking=_on_thinking)
+        from pulse.llm_builder import get_query_builder
+
+        builder = get_query_builder()
+        request = builder.build(
+            prompt, reference_queries=refs, on_thinking=_on_thinking
+        )
+    except ImportError as e:
+        _print_missing_provider_package(e)
+        raise typer.Exit(1)
+    except (RuntimeError, ValueError) as e:
+        err.print(f"[red]{e}[/red]")
+        raise typer.Exit(1)
     except TypeError as e:
         if "api_key" in str(e) or "authentication" in str(e).lower():
-            err.print("[red]No Anthropic API key found.[/red]")
-            err.print(
-                "Set [bold]ANTHROPIC_API_KEY[/bold] in your environment or a [bold].env[/bold] file."
-            )
+            _print_missing_api_key()
             raise typer.Exit(1)
         raise
     xml = request.to_xml()
@@ -468,20 +503,24 @@ def cmd_query(
     no_totals: Annotated[bool, typer.Option("--no-totals")] = False,
 ):
     """Build a query from natural language and execute it immediately."""
-    try:
-        from pulse.llm_builder import LLMQueryBuilder
-    except ImportError:
-        err.print("[red]anthropic package not installed.[/red]")
-        raise typer.Exit(1)
-
     console.print(f"[bold]Building query:[/bold] {prompt!r}", file=sys.stderr)
 
-    builder = LLMQueryBuilder()
+    catalog = _get_catalog()
+    refs = _reference_queries(prompt, catalog)
     try:
-        request = builder.build(prompt)
+        from pulse.llm_builder import get_query_builder
+
+        builder = get_query_builder()
+        request = builder.build(prompt, reference_queries=refs)
+    except ImportError as e:
+        _print_missing_provider_package(e)
+        raise typer.Exit(1)
+    except (RuntimeError, ValueError) as e:
+        err.print(f"[red]{e}[/red]")
+        raise typer.Exit(1)
     except TypeError as e:
         if "api_key" in str(e) or "authentication" in str(e).lower():
-            err.print("[red]No Anthropic API key. Set ANTHROPIC_API_KEY.[/red]")
+            _print_missing_api_key()
             raise typer.Exit(1)
         raise
     xml = request.to_xml()
@@ -502,6 +541,91 @@ def cmd_query(
         raise typer.Exit(1)
 
     _output_response(client, response_xml, format, None, no_totals)
+
+
+# ── compare ───────────────────────────────────────────────────────────────────
+
+_WONDER_RATE_LIMIT_SECONDS = 15
+
+
+@app.command("compare")
+def cmd_compare(
+    prompt: Annotated[
+        str,
+        typer.Argument(
+            help="Natural language comparison, e.g. 'opioid deaths vs suicide deaths by state'"
+        ),
+    ],
+    format: Annotated[
+        str, typer.Option("-f", "--format", help="Output: table|csv|json|xml")
+    ] = "table",
+    save_xml_dir: Annotated[
+        Optional[Path],
+        typer.Option("--save-xml-dir", help="Directory to save each sub-query's XML"),
+    ] = None,
+    timeout: Annotated[int, typer.Option("-t", "--timeout")] = 120,
+    no_totals: Annotated[bool, typer.Option("--no-totals")] = False,
+):
+    """Build and run a comparison across two or more causes/datasets from natural language."""
+    catalog = _get_catalog()
+
+    console.print(f"[bold]Building comparison:[/bold] {prompt!r}\n")
+
+    refs = _reference_queries(prompt, catalog)
+    try:
+        from pulse.llm_builder import get_query_builder, WonderRequestSet
+
+        builder = get_query_builder()
+        result = builder.build_any(prompt, reference_queries=refs)
+    except ImportError as e:
+        _print_missing_provider_package(e)
+        raise typer.Exit(1)
+    except (RuntimeError, ValueError) as e:
+        err.print(f"[red]{e}[/red]")
+        raise typer.Exit(1)
+    except TypeError as e:
+        if "api_key" in str(e) or "authentication" in str(e).lower():
+            _print_missing_api_key()
+            raise typer.Exit(1)
+        raise
+
+    if not isinstance(result, WonderRequestSet):
+        console.print(
+            "[yellow]This didn't look like a comparison — running it as a single query.[/yellow]\n"
+        )
+        requests, labels = [result], [result.dataset_id]
+    else:
+        requests, labels = result.requests, result.labels
+
+    client = WonderClient(timeout=timeout)
+    if save_xml_dir:
+        save_xml_dir.mkdir(parents=True, exist_ok=True)
+
+    for i, (request, label) in enumerate(zip(requests, labels)):
+        xml = request.to_xml()
+
+        if save_xml_dir:
+            safe_name = "".join(c if c.isalnum() or c in "-_" else "_" for c in label)
+            xml_path = save_xml_dir / f"{safe_name}.xml"
+            xml_path.write_text(xml)
+            console.print(f"[green]✓[/green] Saved {xml_path}")
+
+        console.print(f"\n[bold cyan]── {label} ──[/bold cyan]")
+        console.print(f"[dim]Executing against {request.dataset_id}…[/dim]\n")
+
+        try:
+            response_xml = client.query_from_xml(request.dataset_id, xml)
+        except RuntimeError as e:
+            err.print(f"[red]Error from CDC WONDER:[/red] {e}")
+            raise typer.Exit(1)
+
+        _output_response(client, response_xml, format, None, no_totals)
+
+        if i < len(requests) - 1:
+            console.print(
+                f"\n[dim]Waiting {_WONDER_RATE_LIMIT_SECONDS}s (CDC WONDER rate limit)…[/dim]"
+            )
+            time.sleep(_WONDER_RATE_LIMIT_SECONDS)
 
 
 # ── refine ────────────────────────────────────────────────────────────────────
@@ -533,17 +657,25 @@ def cmd_refine(
 
     base_xml = path.read_text()
 
-    try:
-        from pulse.llm_builder import LLMQueryBuilder
-    except ImportError:
-        err.print("[red]anthropic not installed.[/red]")
-        raise typer.Exit(1)
-
     console.print(f"[bold]Refining:[/bold] {path.name}")
     console.print(f"[bold]Feedback:[/bold] {feedback!r}\n")
 
-    builder = LLMQueryBuilder()
-    request = builder.build(feedback, base_xml=base_xml)
+    try:
+        from pulse.llm_builder import get_query_builder
+
+        builder = get_query_builder()
+        request = builder.build(feedback, base_xml=base_xml)
+    except ImportError as e:
+        _print_missing_provider_package(e)
+        raise typer.Exit(1)
+    except (RuntimeError, ValueError) as e:
+        err.print(f"[red]{e}[/red]")
+        raise typer.Exit(1)
+    except TypeError as e:
+        if "api_key" in str(e) or "authentication" in str(e).lower():
+            _print_missing_api_key()
+            raise typer.Exit(1)
+        raise
     xml = request.to_xml()
 
     if output:
@@ -563,6 +695,116 @@ def cmd_refine(
             err.print(f"[red]Error:[/red] {e}")
             raise typer.Exit(1)
         _output_response(client, response_xml, format, None, False)
+
+
+# ── chat ──────────────────────────────────────────────────────────────────────
+
+
+@app.command("chat")
+def cmd_chat(
+    initial_prompt: Annotated[
+        Optional[str], typer.Argument(help="Optional first request to start with")
+    ] = None,
+):
+    """Interactively build and refine a CDC WONDER query over multiple turns."""
+    catalog = _get_catalog()
+
+    try:
+        from pulse.llm_builder import get_query_builder
+
+        builder = get_query_builder()
+    except ImportError as e:
+        _print_missing_provider_package(e)
+        raise typer.Exit(1)
+    except (RuntimeError, ValueError) as e:
+        err.print(f"[red]{e}[/red]")
+        raise typer.Exit(1)
+
+    current_xml: Optional[str] = None
+    current_dataset_id: Optional[str] = None
+
+    console.print(
+        "\n[bold]pulse chat[/bold] — describe a query, then refine it turn by turn."
+    )
+    console.print("[dim]Commands: :xml  :run  :save <path>  :reset  :exit[/dim]\n")
+
+    def _build_turn(text: str) -> None:
+        nonlocal current_xml, current_dataset_id
+        try:
+            if current_xml is None:
+                refs = _reference_queries(text, catalog)
+                request = builder.build(text, reference_queries=refs)
+            else:
+                request = builder.build(text, base_xml=current_xml)
+        except TypeError as e:
+            if "api_key" in str(e) or "authentication" in str(e).lower():
+                _print_missing_api_key()
+                return
+            raise
+        current_xml = request.to_xml()
+        current_dataset_id = request.dataset_id
+        console.print(f"\n[dim]Dataset:[/dim] {current_dataset_id}")
+        console.print(current_xml)
+        console.print()
+
+    if initial_prompt:
+        console.print(f"[bold]>[/bold] {initial_prompt}")
+        _build_turn(initial_prompt)
+
+    while True:
+        try:
+            text = Prompt.ask("[bold cyan]pulse>[/bold cyan]").strip()
+        except EOFError, KeyboardInterrupt:
+            console.print()
+            break
+
+        if not text:
+            continue
+
+        if text in (":exit", ":quit"):
+            break
+
+        if text == ":xml":
+            if current_xml:
+                console.print(current_xml)
+            else:
+                console.print("[yellow]No query built yet.[/yellow]")
+            continue
+
+        if text == ":reset":
+            current_xml = None
+            current_dataset_id = None
+            console.print("[dim]Reset.[/dim]")
+            continue
+
+        if text.startswith(":save"):
+            parts = text.split(maxsplit=1)
+            if not current_xml:
+                console.print("[yellow]No query built yet.[/yellow]")
+            elif len(parts) < 2:
+                console.print("[yellow]Usage: :save <path>[/yellow]")
+            else:
+                out_path = Path(parts[1])
+                out_path.write_text(current_xml)
+                console.print(f"[green]✓[/green] Saved to {out_path}")
+            continue
+
+        if text == ":run":
+            if not current_xml or not current_dataset_id:
+                console.print("[yellow]No query built yet.[/yellow]")
+                continue
+            client = WonderClient()
+            try:
+                response_xml = client.query_from_xml(current_dataset_id, current_xml)
+            except RuntimeError as e:
+                err.print(f"[red]Error from CDC WONDER:[/red] {e}")
+                continue
+            _output_response(client, response_xml, "table", None, False)
+            continue
+
+        _build_turn(text)
+
+    console.print("[dim]Bye.[/dim]")
 
 
 # ── topics ────────────────────────────────────────────────────────────────────
