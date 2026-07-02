@@ -5,7 +5,6 @@ from __future__ import annotations
 import csv
 import io
 import json
-import sys
 import time
 from pathlib import Path
 from typing import Annotated, Optional
@@ -503,7 +502,7 @@ def cmd_query(
     no_totals: Annotated[bool, typer.Option("--no-totals")] = False,
 ):
     """Build a query from natural language and execute it immediately."""
-    console.print(f"[bold]Building query:[/bold] {prompt!r}", file=sys.stderr)
+    err.print(f"[bold]Building query:[/bold] {prompt!r}")
 
     catalog = _get_catalog()
     refs = _reference_queries(prompt, catalog)
@@ -527,11 +526,9 @@ def cmd_query(
 
     if save_xml:
         save_xml.write_text(xml)
-        console.print(f"[green]✓[/green] Saved XML to {save_xml}", file=sys.stderr)
+        err.print(f"[green]✓[/green] Saved XML to {save_xml}")
 
-    console.print(
-        f"[dim]Executing against {request.dataset_id}…[/dim]\n", file=sys.stderr
-    )
+    err.print(f"[dim]Executing against {request.dataset_id}…[/dim]\n")
 
     client = WonderClient(timeout=timeout)
     try:
