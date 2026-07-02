@@ -205,6 +205,24 @@ into two kinds:
 - How do PM2.5 air quality levels correlate with where people live?
 - What are the most common adverse events reported after COVID vaccines?
 
+## Releasing
+
+Releases are cut by pushing a tag; two workflows handle the rest:
+
+1. Bump `version` in `pyproject.toml`, commit it.
+2. `git tag vX.Y.Z && git push origin vX.Y.Z`
+3. **`release.yml`** builds the sdist/wheel, fails fast if the tag doesn't
+   match `pyproject.toml`'s version, and creates a GitHub Release with the
+   built artifacts attached.
+4. **`publish.yml`** fires on that Release being published, downloads its
+   artifacts, and publishes them to PyPI (`pulse-code`) via trusted
+   publishing (OIDC) against the `prod` environment — no API tokens stored
+   in the repo.
+
+Release publishing is immutable: once a version is published to PyPI it
+can't be re-uploaded, so a bad release means bumping to a new version, not
+re-tagging.
+
 ## Based On
 
 Built using [fartbagxp/health](https://github.com/fartbagxp/health) as reference — a comprehensive collection of CDC data pipelines and the CDC WONDER XML API client and LLM query builder this tool builds on.
