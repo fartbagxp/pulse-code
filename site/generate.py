@@ -23,7 +23,38 @@ _REPO_ROOT = _SITE_DIR.parent
 _QUERIES_DIR = _REPO_ROOT / "src" / "pulse" / "queries"
 _CATALOG_PATH = _REPO_ROOT / "src" / "pulse" / "data" / "catalog.json"
 _QUERIES_INDEX_PATH = _REPO_ROOT / "src" / "pulse" / "data" / "queries_index.json"
+_VARIABLE_LABELS_PATH = _REPO_ROOT / "src" / "pulse" / "data" / "variable_labels.json"
 _DIST_DIR = _SITE_DIR / "dist"
+
+# Plain-English explanations for boilerplate parameters — not tied to any
+# specific dataset variable.
+BOILERPLATE_HELP = {
+    "action-Send": "Submit trigger. CDC WONDER only processes the request when this is present with value 'Send'.",
+    "dataset_code": "Which CDC WONDER dataset to query (e.g. D202 for Tuberculosis).",
+    "dataset_label": "Human-readable dataset name, echoed back in the response header.",
+    "dataset_vintage": "Dataset revision/vintage identifier — usually left blank.",
+    "dataset_vintage_latest": "Which vintage (version) of this dataset to use.",
+    "stage": "Always 'request' — tells WONDER this is a data request, not a form page render.",
+}
+
+# Plain-English explanations for common O_* output/mode options that aren't
+# themselves a reference to a dataset variable.
+O_HELP = {
+    "O_rate_per": "Denominator for computed rates — e.g. 100000 means 'per 100,000 people'.",
+    "O_show_totals": "Whether to include a grand-total row in the results.",
+    "O_show_zeros": "Whether to include rows where the count is zero.",
+    "O_show_suppressed": "Whether to include rows CDC suppressed for small counts (shown as 'Suppressed', not a real number).",
+    "O_precision": "How many decimal places to show on computed rates.",
+    "O_timeout": "Server-side timeout for the request, in seconds.",
+    "O_javascript": "Internal form flag copied from the web UI — always 'on'.",
+    "O_export-format": "File format used when exporting results (e.g. xls).",
+    "O_title": "Optional custom title for the result set.",
+    "O_oc-sect1-request": "Internal UI state for the request form's collapsible section — has no effect on the data.",
+    "O_aar_enable": "Whether to calculate Age-Adjusted Rate. Must be 'false' when grouping by age.",
+    "O_aar": "Which Age-Adjusted Rate standard population to use.",
+    "O_aar_CI": "Whether to include confidence intervals on the Age-Adjusted Rate.",
+    "O_change_action-Send-Export Results": "Internal flag tied to the 'Export Results' button's state.",
+}
 
 
 @dataclass(frozen=True)
@@ -132,6 +163,81 @@ def load_queries_index() -> list[dict]:
     return raw["queries"]
 
 
+def load_variable_labels() -> dict[str, dict[str, str]]:
+    return json.loads(_VARIABLE_LABELS_PATH.read_text())
+
+
+def explain_parameter(
+    name: str,
+    values: list[str],
+    dataset_id: str,
+    variable_labels: dict[str, dict[str, str]],
+    catalog: dict[str, dict],
+) -> str:
+    """Plain-English explanation of what this exact parameter does — not
+    just its category, but what B_1=D202.V20 actually means (Year)."""
+
+    def lookup(code: str) -> str | None:
+        # Finder/value parameter names reference the base variable code
+        # (e.g. "D150.V22"), but multi-level variables are only keyed by
+        # their "-level1"/"-level2" variants (e.g. "D150.V22-level1").
+        if code in labels:
+            return labels[code]
+        return labels.get(f"{code}-level1")
+
+    cat = categorize(name)
+    labels = variable_labels.get(dataset_id, {})
+    dataset = catalog.get(dataset_id, {})
+    val = values[0] if values else ""
+
+    if cat.key == "B":
+        if val == "*None*":
+            return (
+                "Unused group-by slot — this row won't be split out by anything extra."
+            )
+        label = lookup(val) or val
+        return f"Splits the results out by {label}."
+
+    if cat.key in ("F", "V", "I"):
+        code = name.split("_", 1)[1] if "_" in name else name
+        label = lookup(code) or code
+        if cat.key == "F":
+            return f"Filter picker for {label} — lets you narrow results down to specific {label.lower()} values before sending the request."
+        if cat.key == "I":
+            return f"Blank text box paired with the {label} filter above, for typing a custom search term."
+        if val == "*All*" or not val:
+            return f"Filter on {label}: not restricted here — every value is included."
+        shown = ", ".join(values[:5]) + ("…" if len(values) > 5 else "")
+        return f"Filter on {label}, restricted to: {shown}."
+
+    if cat.key == "finder-stage":
+        code = name[len("finder-stage-") :]
+        label = lookup(code) or code
+        return f"Tells WONDER that {label} uses the multi-level picker (needed whenever a filter on {label} is present)."
+
+    if cat.key == "M":
+        measure = next(
+            (m for m in dataset.get("measures", []) if m["code"] == val), None
+        )
+        return (
+            f"Includes {measure['label']} as a column in the results."
+            if measure
+            else "A number or rate included as a column in the results."
+        )
+
+    if cat.key == "O":
+        if name in O_HELP:
+            return O_HELP[name]
+        if name.endswith("_fmode"):
+            return "Tells WONDER to use the standard filter mode for the paired finder variable above."
+        label = lookup(val)
+        if label:
+            return f"Required selection — tells WONDER to use {label} here. Missing this causes an HTTP 500 error."
+        return "A required output setting or radio-button selection for this dataset."
+
+    return BOILERPLATE_HELP.get(name, "Required request metadata — always sent as-is.")
+
+
 def queries_by_dataset(queries: list[dict]) -> dict[str, list[dict]]:
     by_ds: dict[str, list[dict]] = {}
     for q in queries:
@@ -200,7 +306,9 @@ def page(title: str, depth: int, body: str) -> str:
 </head>
 <body>
 {render_nav(depth)}
+<div class="page">
 {body}
+</div>
 {render_footer()}
 </body>
 </html>
@@ -210,19 +318,26 @@ def page(title: str, depth: int, body: str) -> str:
 # ── parameter rendering ──────────────────────────────────────────────────
 
 
-def render_parameter(name: str, values: list[str]) -> str:
+def render_parameter(
+    name: str,
+    values: list[str],
+    dataset_id: str,
+    variable_labels: dict[str, dict[str, str]],
+    catalog: dict[str, dict],
+) -> str:
     cat = categorize(name)
     esc_name = html.escape(name)
     esc_values = (
         ", ".join(html.escape(v) if v else "&lt;empty&gt;" for v in values)
         or "&lt;empty&gt;"
     )
+    explanation = explain_parameter(name, values, dataset_id, variable_labels, catalog)
     return f"""<div class="param param-{cat.key}">
       <span class="param-name">{esc_name}</span>
       <span class="param-value">{esc_values}</span>
       <div class="param-tip">
         <strong>{html.escape(cat.label)}</strong>
-        <p>{html.escape(cat.description)}</p>
+        <p>{html.escape(explanation)}</p>
       </div>
     </div>"""
 
@@ -230,11 +345,19 @@ def render_parameter(name: str, values: list[str]) -> str:
 # ── pages ────────────────────────────────────────────────────────────────
 
 
-def render_example(query: dict, catalog: dict, siblings: list[dict]) -> str:
+def render_example(
+    query: dict,
+    catalog: dict,
+    siblings: list[dict],
+    variable_labels: dict[str, dict[str, str]],
+) -> str:
     filename = query["filename"]
+    dataset_id = query["dataset_id"]
     params = parse_params(filename)
-    lines = "\n    ".join(render_parameter(n, v) for n, v in params)
-    dataset = catalog.get(query["dataset_id"], {})
+    lines = "\n    ".join(
+        render_parameter(n, v, dataset_id, variable_labels, catalog) for n, v in params
+    )
+    dataset = catalog.get(dataset_id, {})
     tier = complexity_tier(params)
     topic_color = TOPIC_COLORS.get(dataset.get("topic", ""), "#85837e")
 
@@ -339,14 +462,15 @@ def render_index(catalog: dict, by_dataset: dict[str, list[dict]]) -> str:
 
     body = f"""
 <section class="hero">
-  <p class="hero-kicker">CDC WONDER Query Explorer</p>
-  <h1>Every field<br><span class="accent">has a reason</span>.</h1>
+  <p class="hero-kicker">CDC WONDER API Reference</p>
+  <h1>What every parameter<br>actually does.</h1>
   <p class="hero-p">
     A CDC WONDER API request is a flat list of <code>&lt;parameter&gt;</code>
-    elements. Each name's prefix tells you what it does — this site color-codes
-    those prefixes across real, working queries from the
-    <a href="https://github.com/fartbagxp/pulse-code" target="_blank">pulse</a> CLI,
-    and summarizes every dataset it knows how to query.
+    elements with cryptic names like <code>B_1</code> or <code>F_D202.V20</code>.
+    This is a reference for reviewing or building those requests — color-coded
+    by category, with a plain-English explanation for every parameter in
+    every bundled query from the
+    <a href="https://github.com/fartbagxp/pulse-code" target="_blank">pulse</a> CLI.
   </p>
   <div class="code-pill hero-snippet"><span class="ck">B_1</span> = <span class="cs">D202.V20</span>   <span class="cm"># Group by Year</span>
 <span class="ck">O_age</span> = <span class="cs">D202.V1</span>  <span class="cm"># Required radio button</span>
@@ -355,16 +479,16 @@ def render_index(catalog: dict, by_dataset: dict[str, list[dict]]) -> str:
 
 <section class="chapter" id="legend">
   <p class="ch-kicker">Parameter Structure</p>
-  <h2 class="ch-h">Eight kinds<br><span class="ch-accent">of parameter</span>.</h2>
+  <h2 class="ch-h">Eight kinds of parameter.</h2>
   <p class="ch-p">Every <code>&lt;parameter&gt;</code> in a WONDER request falls into one of these categories.</p>
   <ul class="legend">
     {legend_items}
   </ul>
 </section>
 
-<section class="chapter chapter--wide" id="datasets">
+<section class="chapter" id="datasets">
   <p class="ch-kicker">{len(catalog)} Datasets &middot; {total_queries} Bundled Queries</p>
-  <h2 class="ch-h">Dataset<br><span class="ch-accent">overview</span>.</h2>
+  <h2 class="ch-h">Dataset overview.</h2>
   <p class="ch-p">Same summary as <code>uv run pulse datasets</code> — every dataset pulse knows about, and whether there's an annotated example to look at.</p>
   <div class="table-wrap">
     <table>
@@ -416,11 +540,13 @@ nav a:hover { color: var(--t); }
 
 footer {
   display: flex; justify-content: space-between;
-  padding: 1.75rem 2.5rem; border-top: 1px solid var(--rim);
+  padding: 1.75rem 3.5rem; border-top: 1px solid var(--rim);
   color: var(--t4); font-size: .72rem;
 }
 
-.hero { padding: 8.5rem 4rem 3rem; max-width: 760px; }
+.page { max-width: 1280px; margin: 0 auto; padding: 0 3.5rem; }
+
+.hero { padding: 8.5rem 0 3rem; }
 .hero-kicker {
   display: flex; align-items: center; gap: .5rem;
   font-size: .62rem; font-weight: 700; letter-spacing: .22em; text-transform: uppercase;
@@ -428,11 +554,11 @@ footer {
 }
 .hero-kicker:before { content: ""; width: 18px; height: 1px; background: currentColor; }
 .hero h1 {
-  font-size: clamp(2.6rem, 6vw, 4.5rem); font-weight: 900;
-  letter-spacing: -.055em; line-height: .95; margin-bottom: 1.25rem;
+  font-size: clamp(2.6rem, 5.5vw, 4.25rem); font-weight: 900;
+  letter-spacing: -.045em; line-height: 1; margin-bottom: 1.25rem;
+  max-width: 20ch;
 }
-.hero h1 .accent, .accent { color: rgb(var(--theme)); }
-.hero-p { color: var(--t3); font-size: .95rem; line-height: 1.7; max-width: 560px; margin-bottom: 1.75rem; }
+.hero-p { color: var(--t3); font-size: 1rem; line-height: 1.7; max-width: 640px; margin-bottom: 1.75rem; }
 .hero-meta { display: flex; align-items: center; gap: .6rem; color: var(--t3); font-size: .85rem; margin-top: 1rem; }
 .hero--example { padding-bottom: 2rem; }
 
@@ -441,19 +567,17 @@ footer {
   padding: 1.1rem 1.3rem; font-family: ui-monospace, "Cascadia Code", monospace;
   font-size: .78rem; line-height: 1.8; white-space: pre-wrap;
 }
-.hero-snippet { color: var(--t2); max-width: 560px; }
+.hero-snippet { color: var(--t2); max-width: 640px; }
 .cs { color: #86efac; }
 .cn { color: #fbbf24; }
 .ck { color: rgb(var(--theme)); }
 .cm { color: var(--t3); }
 
-.chapter { padding: 4rem; border-top: 1px solid var(--rim); max-width: 900px; }
-.chapter--wide { max-width: none; }
+.chapter { padding: 3.5rem 0; border-top: 1px solid var(--rim); }
 .chapter--tight { padding-top: 0; padding-bottom: 3rem; }
 .ch-kicker { font-size: .6rem; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; opacity: .5; margin-bottom: 1.1rem; }
-.ch-h { font-size: clamp(1.8rem, 3.5vw, 2.6rem); font-weight: 900; letter-spacing: -.05em; line-height: .96; margin-bottom: 1.1rem; }
-.ch-accent { color: rgb(var(--theme)); }
-.ch-p { color: var(--t3); font-size: .92rem; line-height: 1.7; max-width: 640px; margin-bottom: 1.75rem; }
+.ch-h { font-size: clamp(1.7rem, 3vw, 2.3rem); font-weight: 900; letter-spacing: -.04em; line-height: 1.05; margin-bottom: 1.1rem; }
+.ch-p { color: var(--t3); font-size: .92rem; line-height: 1.7; max-width: 720px; margin-bottom: 1.75rem; }
 .ch-links { display: flex; flex-direction: column; gap: .6rem; }
 .ch-links a { color: var(--t3); font-size: .85rem; text-decoration: none; display: inline-flex; align-items: center; gap: .5rem; transition: color .15s; }
 .ch-links a:before { content: "→"; font-size: .75rem; }
@@ -517,8 +641,9 @@ td.subject { color: var(--t3); max-width: 420px; }
 @media (max-width: 700px) {
   nav { padding: 0 1.25rem; }
   nav ul { gap: 1.1rem; }
-  .hero { padding: 7rem 1.5rem 2.5rem; }
-  .chapter { padding: 3rem 1.5rem; }
+  .page { padding: 0 1.25rem; }
+  .hero { padding: 7rem 0 2.5rem; }
+  .chapter { padding: 2.5rem 0; }
   footer { padding: 1.5rem; flex-direction: column; gap: .4rem; }
   .param-name { min-width: 140px; }
 }
@@ -537,6 +662,7 @@ def main() -> None:
     catalog = load_catalog()
     queries = load_queries_index()
     by_dataset = queries_by_dataset(queries)
+    variable_labels = load_variable_labels()
 
     examples_dir = _DIST_DIR / "examples"
     examples_dir.mkdir(parents=True, exist_ok=True)
@@ -548,7 +674,9 @@ def main() -> None:
     for ds_id, ds_queries in by_dataset.items():
         for q in ds_queries:
             out_name = f"{Path(q['filename']).stem}.html"
-            (examples_dir / out_name).write_text(render_example(q, catalog, ds_queries))
+            (examples_dir / out_name).write_text(
+                render_example(q, catalog, ds_queries, variable_labels)
+            )
             print(f"wrote examples/{out_name}")
 
 
