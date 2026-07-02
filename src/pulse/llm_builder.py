@@ -2,18 +2,39 @@
 
 from __future__ import annotations
 
+import json
 import os
+import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Optional
+from typing import NamedTuple, Optional
 
 import anthropic
+import httpx
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
 load_dotenv()
 
 _TEMPLATES_DIR = Path(__file__).parent / "templates"
+_QUERIES_DIR = Path(__file__).parent / "queries"
+_QUERIES_INDEX_PATH = Path(__file__).parent / "data" / "queries_index.json"
+
+_dataset_query_index: Optional[dict[str, str]] = None
+
+
+def _build_http_client() -> Optional[httpx.Client]:
+    """Build an httpx.Client routed through LLM_HTTP_PROXY, if set.
+
+    Supports socks5h:// (DNS resolved remotely, through the proxy) as well
+    as http(s):// proxy URLs — useful when the LLM endpoint isn't directly
+    reachable and needs to be bridged through a SOCKS proxy.
+    """
+    proxy = os.getenv("LLM_HTTP_PROXY")
+    if not proxy:
+        return None
+    return httpx.Client(proxy=proxy)
+
 
 # Age variables — AAR is incompatible when grouping by these
 _AGE_VARS = {
@@ -215,6 +236,20 @@ You are a CDC WONDER query builder. Convert natural language into WONDER API XML
 4. Set O_aar_enable=false when grouping by any age variable.
 5. Output OVERRIDES ONLY — the base template fills in all boilerplate (V_*, I_*, finder-stage-*, VM_*).
 6. Do NOT output finder-stage-*, O_*_fmode, I_*, or VM_* — those come from the template.
+7. Use the build_comparison_query tool instead of build_wonder_query when the
+   request compares two or more distinct causes, subjects, or datasets (e.g.
+   "opioid deaths vs suicide deaths", "COVID deaths vs flu deaths by state").
+   Each sub-query in the comparison gets its own short label, dataset_id, and
+   parameters, following the same rules above.
+
+## Dataset-Specific Quirks
+- D128 (STD Morbidity by Age/Race/Sex): the disease filter (V_D128.V3)
+  defaults to *All* (chlamydia + gonorrhea + syphilis together). CDC WONDER
+  requires Disease (D128.V3) to be one of the B_1..B_5 groupings whenever
+  more than one disease is in scope — otherwise it returns HTTP 500 ("must
+  be grouped by Disease when more than one disease is selected"). Either
+  include D128.V3 in the group-by, or restrict V_D128.V3 to a single
+  disease code.
 """
 
 _TOOL_SCHEMA = {
@@ -249,6 +284,54 @@ _TOOL_SCHEMA = {
     },
 }
 
+_COMPARISON_TOOL_SCHEMA = {
+    "name": "build_comparison_query",
+    "description": (
+        "Output OVERRIDES for two or more CDC WONDER XML queries to compare "
+        "distinct causes, subjects, or datasets side by side (e.g. opioid "
+        "deaths vs suicide deaths). Each sub-query follows the same override "
+        "rules as build_wonder_query."
+    ),
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "queries": {
+                "type": "array",
+                "minItems": 2,
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "label": {
+                            "type": "string",
+                            "description": "Short human-readable label for this sub-query",
+                        },
+                        "dataset_id": {
+                            "type": "string",
+                            "description": "CDC WONDER dataset code (e.g. D176, D77, D66)",
+                        },
+                        "parameters": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {"type": "string"},
+                                    "values": {
+                                        "type": "array",
+                                        "items": {"type": "string"},
+                                    },
+                                },
+                                "required": ["name", "values"],
+                            },
+                        },
+                    },
+                    "required": ["label", "dataset_id", "parameters"],
+                },
+            },
+        },
+        "required": ["queries"],
+    },
+}
+
 
 class WonderParam(BaseModel):
     name: str
@@ -274,9 +357,62 @@ class WonderRequest(BaseModel):
         return "\n".join(lines)
 
 
+class WonderRequestSet(BaseModel):
+    requests: list[WonderRequest]
+    labels: list[str]
+
+
+def _build_user_content(
+    prompt: str,
+    base_xml: Optional[str],
+    reference_queries: Optional[list[tuple[str, str]]],
+) -> str:
+    parts = []
+    if reference_queries:
+        parts.append(
+            "Here are real working CDC WONDER queries for reference. Use them as "
+            "structural inspiration (parameter combos, mode selectors) when relevant "
+            "— do not copy them blindly if the request calls for something different."
+        )
+        for description, xml in reference_queries:
+            parts.append(f'<example description="{description}">\n{xml}\n</example>')
+    if base_xml:
+        parts.append(
+            f"Starting from this existing query, modify it as requested:\n\n"
+            f"<existing-query>\n{base_xml}\n</existing-query>\n\n"
+            f"Modification request: {prompt}"
+        )
+    else:
+        parts.append(prompt)
+    return "\n\n".join(parts)
+
+
+def _bundled_query_for_dataset(dataset_id: str) -> Optional[str]:
+    """First bundled example query for a dataset, used as a merge target
+    when the dataset has no `{id}-base.xml` template (e.g. D202, D133,
+    D150 — see docs/building-xml-queries.md). Without something to merge
+    onto, required radio-button selectors (O_age, O_race, etc.) go missing
+    and CDC WONDER returns HTTP 500."""
+    global _dataset_query_index
+    if _dataset_query_index is None:
+        raw = json.loads(_QUERIES_INDEX_PATH.read_text())
+        index: dict[str, str] = {}
+        for q in raw["queries"]:
+            index.setdefault(q["dataset_id"], q["filename"])
+        _dataset_query_index = index
+
+    filename = _dataset_query_index.get(dataset_id)
+    if not filename:
+        return None
+    path = _QUERIES_DIR / filename
+    return path.read_text() if path.exists() else None
+
+
 def _load_template(dataset_id: str) -> Optional[str]:
     path = _TEMPLATES_DIR / f"{dataset_id}-base.xml"
-    return path.read_text() if path.exists() else None
+    if path.exists():
+        return path.read_text()
+    return _bundled_query_for_dataset(dataset_id)
 
 
 def _parse_xml_params(xml_str: str) -> list[WonderParam]:
@@ -308,6 +444,17 @@ def _merge_overrides(template_xml: str, overrides: list[WonderParam]) -> str:
     return WonderRequest(dataset_id=dataset_id, parameters=base_params).to_xml()
 
 
+def _finalize_request(raw: WonderRequest) -> WonderRequest:
+    """Merge raw LLM overrides onto the dataset's base template, if one exists."""
+    template = _load_template(raw.dataset_id)
+    if not template:
+        return raw
+    constrained = _apply_constraints(raw.parameters)
+    merged_xml = _merge_overrides(template, constrained)
+    merged_params = _parse_xml_params(merged_xml)
+    return WonderRequest(dataset_id=raw.dataset_id, parameters=merged_params)
+
+
 def _apply_constraints(overrides: list[WonderParam]) -> list[WonderParam]:
     """Enforce CDC WONDER rules: disable AAR when grouping by age."""
     by_name = {p.name: p for p in overrides}
@@ -321,21 +468,33 @@ def _apply_constraints(overrides: list[WonderParam]) -> list[WonderParam]:
     return list(by_name.values())
 
 
-class LLMQueryBuilder:
-    """Build or refine CDC WONDER queries using Claude as the reasoning engine."""
+class ModelTurn(NamedTuple):
+    """A normalized model response, independent of LLM provider."""
 
-    def __init__(
-        self, api_key: Optional[str] = None, model: str = "claude-sonnet-4-6"
-    ) -> None:
-        self.client = anthropic.Anthropic(
-            api_key=api_key or os.getenv("ANTHROPIC_API_KEY")
-        )
-        self.model = model
+    tool_name: Optional[str]
+    tool_input: Optional[dict]
+    text: str
+    stop_reason: str
+
+
+class _BaseQueryBuilder:
+    """Shared tool-calling loop for building/refining CDC WONDER queries.
+
+    Subclasses only need to implement `_call()` — everything else (dataset
+    template merging, AAR constraints, comparison-query assembly, the
+    end_turn retry) is provider-agnostic.
+    """
+
+    def _call(
+        self, tools: list[dict], messages: list[dict], max_tokens: int
+    ) -> ModelTurn:
+        raise NotImplementedError
 
     def build(
         self,
         prompt: str,
         base_xml: Optional[str] = None,
+        reference_queries: Optional[list[tuple[str, str]]] = None,
         max_tokens: int = 4096,
         on_thinking: Optional[callable] = None,
     ) -> WonderRequest:
@@ -345,60 +504,26 @@ class LLMQueryBuilder:
         Args:
             prompt: Natural language description of the desired query.
             base_xml: Optional existing query XML to use as starting context for refinement.
+            reference_queries: Optional [(description, xml)] of real working
+                queries to use as structural inspiration (parameter combos,
+                mode selectors) — not to be copied blindly.
             max_tokens: Max tokens for LLM.
             on_thinking: Optional callback(text) called with LLM reasoning text.
         """
-        user_content = prompt
-        if base_xml:
-            user_content = (
-                f"Starting from this existing query, modify it as requested:\n\n"
-                f"<existing-query>\n{base_xml}\n</existing-query>\n\n"
-                f"Modification request: {prompt}"
-            )
-
+        user_content = _build_user_content(prompt, base_xml, reference_queries)
         messages = [{"role": "user", "content": user_content}]
 
         while True:
-            response = self.client.messages.create(
-                model=self.model,
-                max_tokens=max_tokens,
-                system=_SYSTEM_PROMPT,
-                tools=[_TOOL_SCHEMA],
-                messages=messages,
-            )
+            turn = self._call([_TOOL_SCHEMA], messages, max_tokens)
 
-            messages.append({"role": "assistant", "content": response.content})
-
-            tool_block = next(
-                (
-                    b
-                    for b in response.content
-                    if b.type == "tool_use" and b.name == "build_wonder_query"
-                ),
-                None,
-            )
-
-            if tool_block:
-                raw = WonderRequest(**tool_block.input)
-                template = _load_template(raw.dataset_id)
-                if template:
-                    constrained = _apply_constraints(raw.parameters)
-                    merged_xml = _merge_overrides(template, constrained)
-                    merged_params = _parse_xml_params(merged_xml)
-                    return WonderRequest(
-                        dataset_id=raw.dataset_id, parameters=merged_params
-                    )
-                return raw
-
-            text = "".join(getattr(b, "text", "") for b in response.content)
+            if turn.tool_name == "build_wonder_query":
+                return _finalize_request(WonderRequest(**turn.tool_input))
 
             if on_thinking:
-                on_thinking(text)
+                on_thinking(turn.text)
 
-            if response.stop_reason == "end_turn":
-                import re as _re
-
-                dataset_matches = _re.findall(r"\b(D\d+)\b", text)
+            if turn.stop_reason == "end_turn":
+                dataset_matches = re.findall(r"\b(D\d+)\b", turn.text)
                 if dataset_matches:
                     messages.append(
                         {
@@ -407,6 +532,201 @@ class LLMQueryBuilder:
                         }
                     )
                     continue
-                raise ValueError(f"LLM did not produce a query. Response: {text[:300]}")
+                raise ValueError(
+                    f"LLM did not produce a query. Response: {turn.text[:300]}"
+                )
 
-            raise ValueError(f"Unexpected stop reason: {response.stop_reason}")
+            raise ValueError(f"Unexpected stop reason: {turn.stop_reason}")
+
+    def build_any(
+        self,
+        prompt: str,
+        reference_queries: Optional[list[tuple[str, str]]] = None,
+        max_tokens: int = 4096,
+        on_thinking: Optional[callable] = None,
+    ) -> WonderRequest | WonderRequestSet:
+        """
+        Build a WONDER query or, when the request compares multiple causes/
+        datasets, a WonderRequestSet of side-by-side sub-queries.
+
+        Args:
+            prompt: Natural language description of the desired query.
+            reference_queries: Optional [(description, xml)] of real working
+                queries to use as structural inspiration.
+            max_tokens: Max tokens for LLM.
+            on_thinking: Optional callback(text) called with LLM reasoning text.
+        """
+        user_content = _build_user_content(prompt, None, reference_queries)
+        messages = [{"role": "user", "content": user_content}]
+
+        while True:
+            turn = self._call(
+                [_TOOL_SCHEMA, _COMPARISON_TOOL_SCHEMA], messages, max_tokens
+            )
+
+            if turn.tool_name == "build_wonder_query":
+                return _finalize_request(WonderRequest(**turn.tool_input))
+
+            if turn.tool_name == "build_comparison_query":
+                sub_queries = turn.tool_input["queries"]
+                requests = [
+                    _finalize_request(
+                        WonderRequest(
+                            dataset_id=sq["dataset_id"], parameters=sq["parameters"]
+                        )
+                    )
+                    for sq in sub_queries
+                ]
+                labels = [sq["label"] for sq in sub_queries]
+                return WonderRequestSet(requests=requests, labels=labels)
+
+            if on_thinking:
+                on_thinking(turn.text)
+
+            if turn.stop_reason == "end_turn":
+                dataset_matches = re.findall(r"\b(D\d+)\b", turn.text)
+                if dataset_matches:
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": f"Please proceed with dataset {dataset_matches[0]}.",
+                        }
+                    )
+                    continue
+                raise ValueError(
+                    f"LLM did not produce a query. Response: {turn.text[:300]}"
+                )
+
+            raise ValueError(f"Unexpected stop reason: {turn.stop_reason}")
+
+
+class LLMQueryBuilder(_BaseQueryBuilder):
+    """Build or refine CDC WONDER queries using Claude as the reasoning engine."""
+
+    def __init__(
+        self, api_key: Optional[str] = None, model: str = "claude-sonnet-4-6"
+    ) -> None:
+        self.client = anthropic.Anthropic(
+            api_key=api_key or os.getenv("ANTHROPIC_API_KEY"),
+            http_client=_build_http_client(),
+        )
+        self.model = model
+
+    def _call(
+        self, tools: list[dict], messages: list[dict], max_tokens: int
+    ) -> ModelTurn:
+        response = self.client.messages.create(
+            model=self.model,
+            max_tokens=max_tokens,
+            system=_SYSTEM_PROMPT,
+            tools=tools,
+            messages=messages,
+        )
+
+        messages.append({"role": "assistant", "content": response.content})
+
+        tool_block = next((b for b in response.content if b.type == "tool_use"), None)
+        if tool_block:
+            return ModelTurn(tool_block.name, tool_block.input, "", "tool_use")
+
+        text = "".join(getattr(b, "text", "") for b in response.content)
+        return ModelTurn(None, None, text, response.stop_reason)
+
+
+class AzureOpenAIQueryBuilder(_BaseQueryBuilder):
+    """Build or refine CDC WONDER queries using an Azure OpenAI Foundry deployment (e.g. GPT-5.4)."""
+
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        endpoint: Optional[str] = None,
+        deployment: Optional[str] = None,
+        api_version: Optional[str] = None,
+    ) -> None:
+        import openai
+
+        api_key = api_key or os.getenv("AZURE_OPENAI_API_KEY")
+        endpoint = endpoint or os.getenv("AZURE_OPENAI_ENDPOINT")
+        deployment = deployment or os.getenv("AZURE_OPENAI_DEPLOYMENT")
+        api_version = api_version or os.getenv("AZURE_OPENAI_API_VERSION")
+
+        missing = [
+            name
+            for name, value in [
+                ("AZURE_OPENAI_API_KEY", api_key),
+                ("AZURE_OPENAI_ENDPOINT", endpoint),
+                ("AZURE_OPENAI_DEPLOYMENT", deployment),
+                ("AZURE_OPENAI_API_VERSION", api_version),
+            ]
+            if not value
+        ]
+        if missing:
+            raise RuntimeError(
+                "Missing Azure OpenAI configuration: "
+                + ", ".join(missing)
+                + ". Set these in your environment or a .env file."
+            )
+
+        self.client = openai.AzureOpenAI(
+            api_key=api_key,
+            azure_endpoint=endpoint,
+            api_version=api_version,
+            http_client=_build_http_client(),
+        )
+        self.deployment = deployment
+
+    @staticmethod
+    def _to_openai_tools(tools: list[dict]) -> list[dict]:
+        return [
+            {
+                "type": "function",
+                "function": {
+                    "name": t["name"],
+                    "description": t["description"],
+                    "parameters": t["input_schema"],
+                },
+            }
+            for t in tools
+        ]
+
+    def _call(
+        self, tools: list[dict], messages: list[dict], max_tokens: int
+    ) -> ModelTurn:
+        import json
+
+        full_messages = [{"role": "system", "content": _SYSTEM_PROMPT}, *messages]
+        response = self.client.chat.completions.create(
+            model=self.deployment,
+            messages=full_messages,
+            tools=self._to_openai_tools(tools),
+            max_completion_tokens=max_tokens,
+        )
+
+        message = response.choices[0].message
+        messages.append(message.model_dump())
+
+        if message.tool_calls:
+            call = message.tool_calls[0]
+            return ModelTurn(
+                call.function.name, json.loads(call.function.arguments), "", "tool_use"
+            )
+
+        finish_reason = response.choices[0].finish_reason
+        stop_reason = "end_turn" if finish_reason == "stop" else finish_reason
+        return ModelTurn(None, None, message.content or "", stop_reason)
+
+
+def get_query_builder(provider: Optional[str] = None) -> _BaseQueryBuilder:
+    """Return an LLM query builder for the configured provider.
+
+    Selected via the `provider` argument, falling back to the
+    `LLM_PROVIDER` env var, defaulting to "anthropic".
+    """
+    provider = (provider or os.getenv("LLM_PROVIDER", "anthropic")).lower()
+    if provider == "anthropic":
+        return LLMQueryBuilder()
+    if provider in ("azure_openai", "azure-openai", "azure"):
+        return AzureOpenAIQueryBuilder()
+    raise ValueError(
+        f"Unknown LLM_PROVIDER {provider!r}. Use 'anthropic' or 'azure_openai'."
+    )
