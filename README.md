@@ -207,21 +207,25 @@ into two kinds:
 
 ## Releasing
 
-Releases are cut by pushing a tag; two workflows handle the rest:
+Releases are cut by pushing a tag. `publish.yml` (single workflow, one run
+per tag) handles the rest as three sequential jobs:
 
 1. Bump `version` in `pyproject.toml`, commit it.
 2. `git tag vX.Y.Z && git push origin vX.Y.Z`
-3. **`release.yml`** builds the sdist/wheel, fails fast if the tag doesn't
-   match `pyproject.toml`'s version, and creates a GitHub Release with the
-   built artifacts attached.
-4. **`publish.yml`** fires on that Release being published, downloads its
-   artifacts, and publishes them to PyPI (`pulse-code`) via trusted
-   publishing (OIDC) against the `prod` environment — no API tokens stored
-   in the repo.
+3. **`build`** builds the sdist/wheel, failing fast if the tag doesn't match
+   `pyproject.toml`'s version.
+4. **`release`** (needs `build`) creates the GitHub Release with the built
+   artifacts attached — the source of truth for what shipped.
+5. **`publish`** (needs `release`) publishes those same artifacts to PyPI
+   (`pulse-code`) via trusted publishing (OIDC) against the `prod`
+   environment — no API tokens stored in the repo.
 
-Release publishing is immutable: once a version is published to PyPI it
-can't be re-uploaded, so a bad release means bumping to a new version, not
-re-tagging.
+The `needs:` chain means a failure at any step blocks everything after it —
+e.g. a PyPI hiccup can't leave a GitHub Release around for a package that
+isn't actually installable. If the `publish` job fails after `release`
+succeeds, use "Re-run failed jobs" on that workflow run rather than
+re-tagging. PyPI publishing is immutable: once a version is published it
+can't be re-uploaded, so a bad release means bumping to a new version.
 
 ## Based On
 
