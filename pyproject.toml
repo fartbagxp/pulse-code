@@ -27,9 +27,14 @@ pulse = "pulse.cli:app"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src"]
+pythonpath = ["src", "."]
+markers = [
+    "integration: exercises real sockets (localhost SOCKS/HTTP servers, or live LLM/CDC WONDER APIs). Excluded by default — run with `-m integration`.",
+]
+addopts = "-m \"not integration\""
 
 [dependency-groups]
 dev = [
     "pre-commit==4.6.0",
+    "pytest==9.1.1",
 ]
