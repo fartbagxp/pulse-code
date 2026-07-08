@@ -236,6 +236,14 @@ succeeds, use "Re-run failed jobs" on that workflow run rather than
 re-tagging. PyPI publishing is immutable: once a version is published it
 can't be re-uploaded, so a bad release means bumping to a new version.
 
-## Based On
+## Related projects
 
-Built using [fartbagxp/health](https://github.com/fartbagxp/health) as reference, a collection of CDC data pipelines and the CDC WONDER XML API client and LLM query builder this tool builds on.
+`pulse` is the exploration layer of a three-repo pipeline:
+
+```
+pulse-code  →  health  →  health-charts
+(explore)      (archive)   (visualize)
+```
+
+- **[fartbagxp/health](https://github.com/fartbagxp/health)** — a collection of CDC data pipelines (WONDER, data.cdc.gov, NCHS, SEER, WISQARS, and more) and the CDC WONDER XML API client and LLM query builder this tool builds on. Where `pulse` is for one-off, ad hoc exploration, `health` is where a query graduates once someone wants it archived on a recurring schedule: 23 of the 36 saved queries in `src/pulse/queries/` are also saved in `health`'s `src/wonder/queries/`, each wrapped there in a small `fetch_*.py` script that runs on a schedule and commits the result as a CSV under `data/raw/wonder/`. The other 13 (cancer incidence/mortality by site, fetal deaths, PM2.5, TB, STI cases, heat-wave days, etc.) are exploration-only for now — candidates for `health` if any of them turn into a recurring need.
+- **[fartbagxp/health-charts](https://github.com/fartbagxp/health-charts)** — the dashboard at the end of the pipeline. It reads the CSVs `health` archives (including the ones seeded by `pulse`'s queries above) directly from GitHub and renders them as an interactive chart site.
