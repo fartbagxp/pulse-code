@@ -10,6 +10,8 @@ CDC WONDER public health query CLI. Explore datasets, run bundled queries, and u
 
 ## What is this?
 
+![pulse-code demo](docs/demo/pulse-demo.gif)
+
 [CDC WONDER](https://wonder.cdc.gov/) (Wide-ranging ONline Data for Epidemiologic Research) is the government's primary interface for public health statistics: drug overdose deaths, maternal mortality, birth rates, COVID deaths by race, suicide trends, vaccine adverse events, and much more. Its XML API is powerful but opaque.
 
 `pulse` makes it usable:
@@ -179,29 +181,29 @@ into two kinds:
 
 ## Bundled Datasets (with base templates)
 
-| ID | Subject | Years |
-|----|---------|-------|
-| D176 | Provisional mortality: opioids, COVID, suicide, heart disease | 2018–present |
-| D157 | Final mortality, single race (MCD+UCD) | 2018–2023 |
-| D158 | Underlying cause of death, single race: maternal mortality | 2018–2023 |
-| D77 | Multiple cause of death: drug deaths (historical) | 1999–2020 |
-| D76 | Underlying cause of death: suicide, cancer (historical) | 1999–2020 |
-| D141 | MCD with US-Mexico border regions | 1999–2020 |
-| D140 | Compressed mortality ICD-10 | 1999–2016 |
-| D16 | Compressed mortality ICD-9 | 1979–1998 |
-| D74 | Compressed mortality ICD-8 | 1968–1978 |
-| D69 | Linked birth/infant death records | 2007–2023 |
-| D159 | Linked birth/infant death, expanded race | 2017–2023 |
-| D31/D18/D23 | Linked birth/infant death (historical) | 1995–2006 |
-| D66 | Natality: birth rates, birth outcomes | 2007–2024 |
-| D149 | Natality, expanded race detail | 2016–2024 |
-| D192 | Provisional natality (monthly) | 2023–present |
-| D27/D10 | Natality (historical) | 1995–2006 |
-| D8 | VAERS vaccine adverse events | 1990–present |
-| D104 | Heat wave days by county | 1981–2010 |
-| D60/D80/D81 | NLDAS temperature, sunlight, precipitation | 1979–2011 |
-| D73 | PM2.5 fine particulate matter | 2003–2011 |
-| D61 | MODIS land surface temperature | 2003–2008 |
+| ID          | Subject                                                       | Years        |
+| ----------- | ------------------------------------------------------------- | ------------ |
+| D176        | Provisional mortality: opioids, COVID, suicide, heart disease | 2018–present |
+| D157        | Final mortality, single race (MCD+UCD)                        | 2018–2023    |
+| D158        | Underlying cause of death, single race: maternal mortality    | 2018–2023    |
+| D77         | Multiple cause of death: drug deaths (historical)             | 1999–2020    |
+| D76         | Underlying cause of death: suicide, cancer (historical)       | 1999–2020    |
+| D141        | MCD with US-Mexico border regions                             | 1999–2020    |
+| D140        | Compressed mortality ICD-10                                   | 1999–2016    |
+| D16         | Compressed mortality ICD-9                                    | 1979–1998    |
+| D74         | Compressed mortality ICD-8                                    | 1968–1978    |
+| D69         | Linked birth/infant death records                             | 2007–2023    |
+| D159        | Linked birth/infant death, expanded race                      | 2017–2023    |
+| D31/D18/D23 | Linked birth/infant death (historical)                        | 1995–2006    |
+| D66         | Natality: birth rates, birth outcomes                         | 2007–2024    |
+| D149        | Natality, expanded race detail                                | 2016–2024    |
+| D192        | Provisional natality (monthly)                                | 2023–present |
+| D27/D10     | Natality (historical)                                         | 1995–2006    |
+| D8          | VAERS vaccine adverse events                                  | 1990–present |
+| D104        | Heat wave days by county                                      | 1981–2010    |
+| D60/D80/D81 | NLDAS temperature, sunlight, precipitation                    | 1979–2011    |
+| D73         | PM2.5 fine particulate matter                                 | 2003–2011    |
+| D61         | MODIS land surface temperature                                | 2003–2008    |
 
 ## Public Health Questions You Can Answer
 
@@ -240,7 +242,7 @@ can't be re-uploaded, so a bad release means bumping to a new version.
 
 `pulse` is the exploration layer of a three-repo pipeline:
 
-```
+```bash
 pulse-code  →  health  →  health-charts
 (explore)      (archive)   (visualize)
 ```
