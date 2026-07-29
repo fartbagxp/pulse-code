@@ -18,15 +18,109 @@ from rich.table import Table
 from rich.text import Text
 
 from pulse.catalog import Catalog
+from pulse.cdc_open_catalog import dataset as cdc_open_dataset
+from pulse.cdc_open_catalog import datasets as cdc_open_datasets
+from pulse.cdc_open_catalog import search as cdc_open_search
+from pulse.grasp_catalog import DATASETS as GRASP_DATASETS
+from pulse.grasp_catalog import FLUSURV_LOCATIONS
+from pulse.grasp_sdk import (
+    get_flusurv_net,
+    get_fluview_clinical,
+    get_fluview_ili,
+    get_hantavirus_cases,
+    summarize_flusurv_by_location,
+    summarize_flusurv_by_season,
+    summarize_fluview_ili_by_region,
+    summarize_hantavirus_by_state,
+    summarize_hantavirus_by_year,
+)
 from pulse.matcher import match_datasets, match_queries
+from pulse.nis_sdk import get_national_rates, get_vaccination_rates, list_years, stream_records
+from pulse.nssp_client import GEO_TYPES as NSSP_GEO_TYPES
+from pulse.nssp_client import SIGNALS as NSSP_SIGNALS
+from pulse.nssp_sdk import get_ed_visits, get_hhs_region_trends, get_national_trends
+from pulse.seer_catalog import AGE_RANGE, RACE, STAGE
+from pulse.seer_sdk import (
+    compare_sites_mortality,
+    get_incidence_trend,
+    get_mortality_by_age,
+    get_mortality_trend,
+    list_cancer_sites,
+    search_cancer_sites,
+)
+from pulse.soda_client import SodaClient
+from pulse.wisqars_catalog import DATASETS as WISQARS_DATASETS
+from pulse.wisqars_catalog import INJURY_INTENTS, INJURY_MECHANISMS, MAPPING_INTENTS, MAPPING_PERIOD_TYPES
+from pulse.wisqars_sdk import (
+    get_injury_census_tract,
+    get_injury_county,
+    get_injury_mortality,
+    get_injury_national,
+    get_injury_state,
+)
+from pulse.wisqars_sdk import query_dataset as wisqars_query_dataset
 from pulse.wonder_client import WonderClient
 
 app = typer.Typer(
     name="pulse",
-    help="CDC WONDER public health data query CLI — explore, build, and refine.",
+    help="CDC public health data query CLI — explore, build, and refine.",
     add_completion=False,
     no_args_is_help=True,
 )
+seer_app = typer.Typer(
+    help="NCI SEER cancer incidence/mortality statistics.",
+    add_completion=False,
+    no_args_is_help=True,
+)
+cdc_open_app = typer.Typer(
+    help="CDC Open Data (data.cdc.gov) — respiratory, vaccination, mortality, and more.",
+    add_completion=False,
+    no_args_is_help=True,
+)
+wisqars_app = typer.Typer(
+    help="WISQARS injury mortality and violence data.",
+    add_completion=False,
+    no_args_is_help=True,
+)
+grasp_app = typer.Typer(
+    help="ATSDR GRASP disease APIs — hantavirus, FluView, FluSurv-NET.",
+    add_completion=False,
+    no_args_is_help=True,
+)
+grasp_hantavirus_app = typer.Typer(
+    help="Hantavirus case data (pre-1993–present).",
+    add_completion=False,
+    no_args_is_help=True,
+)
+grasp_fluview_app = typer.Typer(
+    help="FluView ILINet and WHO/NREVSS clinical lab data.",
+    add_completion=False,
+    no_args_is_help=True,
+)
+grasp_flusurv_app = typer.Typer(
+    help="FluSurv-NET hospitalization rates (2009-10–present).",
+    add_completion=False,
+    no_args_is_help=True,
+)
+nssp_app = typer.Typer(
+    help="NSSP emergency department visit signals (COVID/flu/RSV).",
+    add_completion=False,
+    no_args_is_help=True,
+)
+nis_app = typer.Typer(
+    help="NIS childhood/teen vaccination survey (fixed-width DAT streaming).",
+    add_completion=False,
+    no_args_is_help=True,
+)
+app.add_typer(seer_app, name="seer")
+app.add_typer(cdc_open_app, name="cdc-open")
+app.add_typer(wisqars_app, name="wisqars")
+app.add_typer(grasp_app, name="grasp")
+grasp_app.add_typer(grasp_hantavirus_app, name="hantavirus")
+grasp_app.add_typer(grasp_fluview_app, name="fluview")
+grasp_app.add_typer(grasp_flusurv_app, name="flusurv")
+app.add_typer(nssp_app, name="nssp")
+app.add_typer(nis_app, name="nis")
 console = Console()
 err = Console(stderr=True)
 
@@ -163,8 +257,9 @@ def cmd_datasets(
     if not topic:
         console.print(
             "[dim]Note: Immunization coverage data (NIS, VaxView, school vaccination) "
-            "is not in WONDER — it is available through CDC Open Data. "
-            "WONDER does include VAERS vaccine adverse events (D8).[/dim]"
+            "is not in WONDER — try [bold]pulse cdc-open list --search vaccination[/bold]. "
+            "WONDER does include VAERS vaccine adverse events (D8). Cancer incidence/mortality "
+            "by site is also outside WONDER — see [bold]pulse seer[/bold].[/dim]"
         )
 
 
@@ -751,7 +846,7 @@ def cmd_chat(
     while True:
         try:
             text = Prompt.ask("[bold cyan]pulse>[/bold cyan]").strip()
-        except EOFError, KeyboardInterrupt:
+        except (EOFError, KeyboardInterrupt):
             console.print()
             break
 
@@ -908,7 +1003,661 @@ def cmd_list_queries(
     )
 
 
+# ── seer ──────────────────────────────────────────────────────────────────────
+
+_SEER_SEX = Annotated[
+    str, typer.Option("--sex", help="both|male|female", show_default=True)
+]
+_SEER_RACE = Annotated[
+    str, typer.Option("--race", help=f"Race code, one of: {sorted(RACE)}")
+]
+_SEER_AGE = Annotated[
+    str, typer.Option("--age-range", help=f"Age range code, one of: {sorted(AGE_RANGE)}")
+]
+_SEER_FORMAT = Annotated[str, typer.Option("-f", "--format", help="table|csv|json")]
+
+
+@seer_app.command("sites")
+def cmd_seer_sites(
+    search: Annotated[
+        Optional[str], typer.Option("--search", help="Substring search e.g. 'breast'")
+    ] = None,
+    json_out: Annotated[bool, typer.Option("--json")] = False,
+):
+    """List/search the SEER cancer site catalog."""
+    sites = search_cancer_sites(search) if search else list_cancer_sites()
+    if json_out:
+        print(json.dumps(sites, indent=2))
+        return
+    t = Table(box=box.ROUNDED, show_header=True, header_style="bold cyan")
+    t.add_column("Code", style="yellow", width=6)
+    t.add_column("Site")
+    for s in sites:
+        t.add_row(s["code"], s["name"])
+    console.print()
+    console.print(t)
+    console.print(f"\n[dim]{len(sites)} sites[/dim]\n")
+
+
+@seer_app.command("mortality")
+def cmd_seer_mortality(
+    site: Annotated[int, typer.Option("--site", help="Cancer site code")],
+    sex: _SEER_SEX = "both",
+    race: _SEER_RACE = "1",
+    age_range: _SEER_AGE = "1",
+    compare_by: Annotated[
+        Optional[str], typer.Option("--compare-by", help="sex|race|age_range")
+    ] = None,
+    long_term: Annotated[
+        bool, typer.Option("--long-term", help="1975-present instead of 2000-present")
+    ] = False,
+    format: _SEER_FORMAT = "table",
+    output: Annotated[Optional[Path], typer.Option("-o", "--output")] = None,
+):
+    """U.S. mortality rate/count by year for a cancer site."""
+    rows = get_mortality_trend(
+        site=site,
+        sex=sex,
+        race=race,
+        age_range=age_range,
+        compare_by=compare_by,
+        long_term=long_term,
+    )
+    _print_rows(rows, format, output)
+
+
+@seer_app.command("incidence")
+def cmd_seer_incidence(
+    site: Annotated[int, typer.Option("--site", help="Cancer site code")],
+    sex: _SEER_SEX = "both",
+    race: _SEER_RACE = "1",
+    age_range: _SEER_AGE = "1",
+    stage: Annotated[
+        str, typer.Option("--stage", help=f"Stage code, one of: {sorted(STAGE)}")
+    ] = "101",
+    compare_by: Annotated[
+        Optional[str], typer.Option("--compare-by", help="sex|race|age_range")
+    ] = None,
+    long_term: Annotated[bool, typer.Option("--long-term")] = False,
+    format: _SEER_FORMAT = "table",
+    output: Annotated[Optional[Path], typer.Option("-o", "--output")] = None,
+):
+    """SEER incidence rate/count by year for a cancer site."""
+    rows = get_incidence_trend(
+        site=site,
+        sex=sex,
+        race=race,
+        age_range=age_range,
+        stage=stage,
+        compare_by=compare_by,
+        long_term=long_term,
+    )
+    _print_rows(rows, format, output)
+
+
+@seer_app.command("by-age")
+def cmd_seer_by_age(
+    site: Annotated[int, typer.Option("--site", help="Cancer site code")],
+    sex: _SEER_SEX = "both",
+    race: _SEER_RACE = "1",
+    compare_by: Annotated[
+        Optional[str], typer.Option("--compare-by", help="sex|race")
+    ] = None,
+    format: _SEER_FORMAT = "table",
+    output: Annotated[Optional[Path], typer.Option("-o", "--output")] = None,
+):
+    """U.S. mortality rate/count by age group for a cancer site."""
+    rows = get_mortality_by_age(site=site, sex=sex, race=race, compare_by=compare_by)
+    _print_rows(rows, format, output)
+
+
+@seer_app.command("compare-sites")
+def cmd_seer_compare_sites(
+    sites: Annotated[list[int], typer.Argument(help="Cancer site codes to compare")],
+    sex: _SEER_SEX = "both",
+    race: _SEER_RACE = "1",
+    age_range: _SEER_AGE = "1",
+    format: _SEER_FORMAT = "table",
+    output: Annotated[Optional[Path], typer.Option("-o", "--output")] = None,
+):
+    """Compare U.S. mortality trends across multiple cancer sites."""
+    rows = compare_sites_mortality(sites=sites, sex=sex, race=race, age_range=age_range)
+    _print_rows(rows, format, output)
+
+
+# ── cdc-open ──────────────────────────────────────────────────────────────────
+
+
+@cdc_open_app.command("list")
+def cmd_cdc_open_list(
+    search: Annotated[Optional[str], typer.Option("--search", "-s")] = None,
+    json_out: Annotated[bool, typer.Option("--json")] = False,
+):
+    """List/search the CDC Open Data (data.cdc.gov) dataset registry."""
+    ds = cdc_open_search(search) if search else cdc_open_datasets()
+
+    if json_out:
+        print(
+            json.dumps(
+                [
+                    {
+                        "key": d.key,
+                        "id": d.id,
+                        "name": d.name,
+                        "description": d.description,
+                        "years": d.years,
+                        "key_columns": d.key_columns,
+                    }
+                    for d in ds
+                ],
+                indent=2,
+            )
+        )
+        return
+
+    t = Table(box=box.ROUNDED, show_header=True, header_style="bold cyan", expand=True)
+    t.add_column("Key", style="yellow", ratio=2, no_wrap=True)
+    t.add_column("ID", width=12, no_wrap=True)
+    t.add_column("Years", width=14, no_wrap=True)
+    t.add_column("Name", ratio=3)
+    for d in ds:
+        t.add_row(d.key, d.id, d.years, d.name)
+
+    console.print()
+    console.print(t)
+    console.print(
+        f"\n[dim]{len(ds)} datasets  |  "
+        f'[bold]pulse cdc-open query <key-or-id>[/bold][/dim]\n'
+    )
+
+
+@cdc_open_app.command("query")
+def cmd_cdc_open_query(
+    dataset_id: Annotated[
+        str, typer.Argument(help="Registry key (e.g. leading_death) or Socrata ID")
+    ],
+    where: Annotated[
+        Optional[str], typer.Option("--where", help="SODA $where clause")
+    ] = None,
+    select: Annotated[
+        Optional[str], typer.Option("--select", help="SODA $select clause")
+    ] = None,
+    group: Annotated[
+        Optional[str], typer.Option("--group", help="SODA $group clause")
+    ] = None,
+    order: Annotated[
+        Optional[str], typer.Option("--order", help="SODA $order clause")
+    ] = None,
+    limit: Annotated[int, typer.Option("--limit", help="Max rows")] = 200,
+    format: Annotated[str, typer.Option("-f", "--format")] = "table",
+    output: Annotated[Optional[Path], typer.Option("-o", "--output")] = None,
+):
+    """Run a raw SODA query against a data.cdc.gov dataset."""
+    ds = cdc_open_dataset(dataset_id)
+    socrata_id = ds.id if ds else dataset_id
+
+    err.print(f"[bold]Querying:[/bold] {socrata_id}" + (f"  ({ds.name})" if ds else ""))
+
+    client = SodaClient()
+    try:
+        rows = client.get(
+            dataset_id=socrata_id,
+            where=where,
+            select=select,
+            group=group,
+            order=order,
+            limit=limit,
+        )
+    except Exception as e:
+        err.print(f"[red]Error from CDC Open Data:[/red] {e}")
+        raise typer.Exit(1)
+
+    _print_rows(rows, format, output)
+
+
+# ── wisqars ───────────────────────────────────────────────────────────────────
+
+_WISQARS_FORMAT = Annotated[str, typer.Option("-f", "--format", help="table|csv|json")]
+_WISQARS_OUTPUT = Annotated[Optional[Path], typer.Option("-o", "--output")]
+
+
+@wisqars_app.command("list")
+def cmd_wisqars_list(json_out: Annotated[bool, typer.Option("--json")] = False):
+    """List WISQARS datasets."""
+    rows = [
+        {"key": k, "id": d.id, "years": d.years, "name": d.name}
+        for k, d in WISQARS_DATASETS.items()
+    ]
+    if json_out:
+        print(json.dumps(rows, indent=2))
+        return
+    t = Table(box=box.ROUNDED, show_header=True, header_style="bold cyan", expand=True)
+    t.add_column("Key", style="yellow", no_wrap=True)
+    t.add_column("ID", width=12, no_wrap=True)
+    t.add_column("Years", width=14, no_wrap=True)
+    t.add_column("Name", ratio=1)
+    for r in rows:
+        t.add_row(r["key"], r["id"], r["years"], r["name"])
+    console.print()
+    console.print(t)
+    console.print(f"\n[dim]{len(rows)} datasets[/dim]\n")
+
+
+@wisqars_app.command("mortality")
+def cmd_wisqars_mortality(
+    intent: Annotated[Optional[str], typer.Option("--intent", help=f"One of: {INJURY_INTENTS}")] = None,
+    mechanism: Annotated[
+        Optional[str], typer.Option("--mechanism", help=f"One of: {INJURY_MECHANISMS}")
+    ] = None,
+    sex: Annotated[Optional[str], typer.Option("--sex", help="Both sexes|Male|Female")] = None,
+    age: Annotated[Optional[str], typer.Option("--age", help="e.g. 'All Ages', '25-34', '< 15'")] = None,
+    race: Annotated[Optional[str], typer.Option("--race")] = None,
+    year: Annotated[Optional[int], typer.Option("--year", help="1999-2016")] = None,
+    limit: Annotated[int, typer.Option("--limit")] = 500,
+    format: _WISQARS_FORMAT = "table",
+    output: _WISQARS_OUTPUT = None,
+):
+    """Fatal injury by mechanism/intent/demographics (1999-2016)."""
+    rows = get_injury_mortality(
+        intent=intent, mechanism=mechanism, sex=sex, age=age, race=race, year=year, limit=limit
+    )
+    _print_rows(rows, format, output)
+
+
+@wisqars_app.command("national")
+def cmd_wisqars_national(
+    intent: Annotated[Optional[str], typer.Option("--intent", help=f"One of: {MAPPING_INTENTS}")] = None,
+    type: Annotated[
+        Optional[str], typer.Option("--type", help=f"One of: {MAPPING_PERIOD_TYPES}")
+    ] = None,
+    year: Annotated[Optional[str], typer.Option("--year", help="e.g. '2023'")] = None,
+    format: _WISQARS_FORMAT = "table",
+    output: _WISQARS_OUTPUT = None,
+):
+    """National firearm/suicide/OD/homicide counts (2019-present)."""
+    rows = get_injury_national(intent=intent, period_type=type, year=year)
+    _print_rows(rows, format, output)
+
+
+@wisqars_app.command("state")
+def cmd_wisqars_state(
+    state: Annotated[Optional[str], typer.Option("--state", help="State name or 2-digit FIPS")] = None,
+    intent: Annotated[Optional[str], typer.Option("--intent", help=f"One of: {MAPPING_INTENTS}")] = None,
+    year: Annotated[Optional[str], typer.Option("--year", help="e.g. '2023' or 'TTM'")] = None,
+    limit: Annotated[int, typer.Option("--limit")] = 500,
+    format: _WISQARS_FORMAT = "table",
+    output: _WISQARS_OUTPUT = None,
+):
+    """State-level injury/violence data (2019-present)."""
+    rows = get_injury_state(state=state, intent=intent, year=year, limit=limit)
+    _print_rows(rows, format, output)
+
+
+@wisqars_app.command("county")
+def cmd_wisqars_county(
+    state: Annotated[Optional[str], typer.Option("--state")] = None,
+    county: Annotated[Optional[str], typer.Option("--county", help="Partial name match")] = None,
+    intent: Annotated[Optional[str], typer.Option("--intent", help=f"One of: {MAPPING_INTENTS}")] = None,
+    year: Annotated[Optional[str], typer.Option("--year")] = None,
+    limit: Annotated[int, typer.Option("--limit")] = 500,
+    format: _WISQARS_FORMAT = "table",
+    output: _WISQARS_OUTPUT = None,
+):
+    """County-level injury/violence data (2019-present)."""
+    rows = get_injury_county(state=state, county=county, intent=intent, year=year, limit=limit)
+    _print_rows(rows, format, output)
+
+
+@wisqars_app.command("tract")
+def cmd_wisqars_tract(
+    state: Annotated[Optional[str], typer.Option("--state")] = None,
+    tract: Annotated[Optional[str], typer.Option("--tract", help="Census tract GEOID partial match")] = None,
+    intent: Annotated[
+        Optional[str], typer.Option("--intent", help="All_Homicide|Drug_OD")
+    ] = None,
+    year: Annotated[Optional[str], typer.Option("--year")] = None,
+    limit: Annotated[int, typer.Option("--limit")] = 500,
+    format: _WISQARS_FORMAT = "table",
+    output: _WISQARS_OUTPUT = None,
+):
+    """Census-tract-level injury/violence data (2022-present)."""
+    rows = get_injury_census_tract(state=state, tract=tract, intent=intent, year=year, limit=limit)
+    _print_rows(rows, format, output)
+
+
+@wisqars_app.command("query")
+def cmd_wisqars_query(
+    dataset_id: Annotated[str, typer.Argument(help="Registry key or Socrata ID")],
+    where: Annotated[Optional[str], typer.Option("--where")] = None,
+    select: Annotated[Optional[str], typer.Option("--select")] = None,
+    order: Annotated[Optional[str], typer.Option("--order")] = None,
+    limit: Annotated[int, typer.Option("--limit")] = 200,
+    format: _WISQARS_FORMAT = "table",
+    output: _WISQARS_OUTPUT = None,
+):
+    """Raw SODA query against any WISQARS dataset."""
+    ds = WISQARS_DATASETS.get(dataset_id)
+    socrata_id = ds.id if ds else dataset_id
+    rows = wisqars_query_dataset(socrata_id, where=where, select=select, order=order, limit=limit)
+    _print_rows(rows, format, output)
+
+
+# ── grasp ─────────────────────────────────────────────────────────────────────
+
+
+@grasp_app.command("list")
+def cmd_grasp_list(json_out: Annotated[bool, typer.Option("--json")] = False):
+    """List available GRASP datasets."""
+    rows = [{"key": k, "years": d.years, "name": d.name} for k, d in GRASP_DATASETS.items()]
+    if json_out:
+        print(json.dumps(rows, indent=2))
+        return
+    t = Table(box=box.ROUNDED, show_header=True, header_style="bold cyan", expand=True)
+    t.add_column("Key", style="yellow", no_wrap=True)
+    t.add_column("Years", width=16, no_wrap=True)
+    t.add_column("Name", ratio=1)
+    for r in rows:
+        t.add_row(r["key"], r["years"], r["name"])
+    console.print()
+    console.print(t)
+    console.print(f"\n[dim]{len(rows)} datasets[/dim]\n")
+
+
+@grasp_hantavirus_app.command("cases")
+def cmd_grasp_hanta_cases(
+    state: Annotated[Optional[str], typer.Option("--state", help="e.g. 'New Mexico'")] = None,
+    state_fips: Annotated[Optional[str], typer.Option("--state-fips", help="2-digit FIPS")] = None,
+    outcome: Annotated[Optional[str], typer.Option("--outcome", help="Alive|Dead|Unknown")] = None,
+    year: Annotated[Optional[str], typer.Option("--year", help="4-digit year or 'Before 1993'")] = None,
+    format: _WISQARS_FORMAT = "table",
+    output: _WISQARS_OUTPUT = None,
+):
+    """Individual hantavirus case records."""
+    rows = get_hantavirus_cases(state_fips=state_fips, state_name=state, outcome=outcome, year=year)
+    _print_rows(rows, format, output)
+
+
+@grasp_hantavirus_app.command("by-year")
+def cmd_grasp_hanta_by_year(format: _WISQARS_FORMAT = "table", output: _WISQARS_OUTPUT = None):
+    """Hantavirus case counts and deaths by year."""
+    _print_rows(summarize_hantavirus_by_year(), format, output)
+
+
+@grasp_hantavirus_app.command("by-state")
+def cmd_grasp_hanta_by_state(format: _WISQARS_FORMAT = "table", output: _WISQARS_OUTPUT = None):
+    """Hantavirus case counts and deaths by state."""
+    _print_rows(summarize_hantavirus_by_state(), format, output)
+
+
+_GRASP_REGION_HELP = (
+    "Region code(s), space-separated. 'nat'=national, 'hhs1'..'hhs10'=HHS regions, "
+    "'cen1'..'cen9'=census regions, or lowercase 2-letter state (e.g. 'ca'). Default: nat"
+)
+_GRASP_EPIWEEK_HELP = "Epiweek range YYYYWW e.g. '202001-202526' or single '202001'"
+
+
+@grasp_fluview_app.command("ili-data")
+def cmd_grasp_fluview_ili_data(
+    region: Annotated[Optional[list[str]], typer.Option("--region", help=_GRASP_REGION_HELP)] = None,
+    epiweeks: Annotated[Optional[str], typer.Option("--epiweeks", help=_GRASP_EPIWEEK_HELP)] = None,
+    format: _WISQARS_FORMAT = "table",
+    output: _WISQARS_OUTPUT = None,
+):
+    """Weekly ILINet influenza-like illness records (1997-98–present)."""
+    rows = get_fluview_ili(regions=region, epiweeks=epiweeks)
+    _print_rows(rows, format, output)
+
+
+@grasp_fluview_app.command("ili-by-region")
+def cmd_grasp_fluview_ili_by_region(
+    epiweeks: Annotated[Optional[str], typer.Option("--epiweeks", help=_GRASP_EPIWEEK_HELP)] = None,
+    format: _WISQARS_FORMAT = "table",
+    output: _WISQARS_OUTPUT = None,
+):
+    """Peak/avg weighted ILI % across nat+HHS+census regions."""
+    _print_rows(summarize_fluview_ili_by_region(epiweeks=epiweeks), format, output)
+
+
+@grasp_fluview_app.command("clinical-data")
+def cmd_grasp_fluview_clinical_data(
+    region: Annotated[Optional[list[str]], typer.Option("--region", help=_GRASP_REGION_HELP)] = None,
+    epiweeks: Annotated[Optional[str], typer.Option("--epiweeks", help=_GRASP_EPIWEEK_HELP)] = None,
+    format: _WISQARS_FORMAT = "table",
+    output: _WISQARS_OUTPUT = None,
+):
+    """WHO/NREVSS clinical lab flu test positivity (2016-17–present)."""
+    rows = get_fluview_clinical(regions=region, epiweeks=epiweeks)
+    _print_rows(rows, format, output)
+
+
+_GRASP_LOCS = sorted(FLUSURV_LOCATIONS.keys())
+
+
+@grasp_flusurv_app.command("data")
+def cmd_grasp_flusurv_data(
+    location: Annotated[
+        Optional[list[str]],
+        typer.Option("--location", help=f"Location code(s). Valid: {', '.join(_GRASP_LOCS)}"),
+    ] = None,
+    epiweeks: Annotated[Optional[str], typer.Option("--epiweeks", help=_GRASP_EPIWEEK_HELP)] = None,
+    season: Annotated[Optional[str], typer.Option("--season", help="e.g. '2019-20'")] = None,
+    format: _WISQARS_FORMAT = "table",
+    output: _WISQARS_OUTPUT = None,
+):
+    """Weekly FluSurv-NET hospitalization rate records."""
+    rows = get_flusurv_net(locations=location, epiweeks=epiweeks, season=season)
+    _print_rows(rows, format, output)
+
+
+@grasp_flusurv_app.command("by-season")
+def cmd_grasp_flusurv_by_season(
+    location: Annotated[str, typer.Option("--location", help=f"Valid: {', '.join(_GRASP_LOCS)}")] = "network_all",
+    format: _WISQARS_FORMAT = "table",
+    output: _WISQARS_OUTPUT = None,
+):
+    """Peak/avg hospitalization rates per season for a location."""
+    _print_rows(summarize_flusurv_by_season(location=location), format, output)
+
+
+@grasp_flusurv_app.command("by-location")
+def cmd_grasp_flusurv_by_location(
+    epiweeks: Annotated[Optional[str], typer.Option("--epiweeks")] = None,
+    season: Annotated[Optional[str], typer.Option("--season", help="e.g. '2019-20'")] = None,
+    format: _WISQARS_FORMAT = "table",
+    output: _WISQARS_OUTPUT = None,
+):
+    """Compare peak/avg hospitalization rates across all FluSurv-NET locations."""
+    _print_rows(summarize_flusurv_by_location(epiweeks=epiweeks, season=season), format, output)
+
+
+# ── nssp ──────────────────────────────────────────────────────────────────────
+
+
+@nssp_app.command("query")
+def cmd_nssp_query(
+    pathogen: Annotated[str, typer.Argument(help=f"One of: {list(NSSP_SIGNALS)}")],
+    geo_type: Annotated[
+        str, typer.Option("--geo-type", help=f"One of: {sorted(NSSP_GEO_TYPES)}")
+    ] = "state",
+    geo_value: Annotated[
+        str,
+        typer.Option(
+            "--geo-value",
+            help="'*' for all, 'ca' for state, '06037' for county FIPS, '4' for HHS region",
+        ),
+    ] = "*",
+    start: Annotated[Optional[str], typer.Option("--start", help="Epiweek YYYYWW")] = None,
+    end: Annotated[Optional[str], typer.Option("--end", help="Epiweek YYYYWW")] = None,
+    format: _WISQARS_FORMAT = "table",
+    output: _WISQARS_OUTPUT = None,
+):
+    """ED visit % for a pathogen by geography."""
+    rows = get_ed_visits(
+        pathogen=pathogen, geo_type=geo_type, geo_value=geo_value, start_date=start, end_date=end
+    )
+    rows.sort(key=lambda r: (r.get("geo_value", ""), r.get("time_value", 0)), reverse=True)
+    _print_rows(rows, format, output)
+
+
+@nssp_app.command("national")
+def cmd_nssp_national(
+    start: Annotated[Optional[str], typer.Option("--start")] = None,
+    end: Annotated[Optional[str], typer.Option("--end")] = None,
+    format: _WISQARS_FORMAT = "table",
+    output: _WISQARS_OUTPUT = None,
+):
+    """All four pathogens (covid/influenza/rsv/combined) at national level."""
+    rows = get_national_trends(start_date=start, end_date=end)
+    rows.sort(key=lambda r: (r.get("pathogen", ""), r.get("time_value", 0)), reverse=True)
+    _print_rows(rows, format, output)
+
+
+@nssp_app.command("hhs")
+def cmd_nssp_hhs(
+    pathogen: Annotated[str, typer.Argument(help=f"One of: {list(NSSP_SIGNALS)}")],
+    region: Annotated[Optional[int], typer.Option("--region", help="1-10, omit for all")] = None,
+    start: Annotated[Optional[str], typer.Option("--start")] = None,
+    end: Annotated[Optional[str], typer.Option("--end")] = None,
+    format: _WISQARS_FORMAT = "table",
+    output: _WISQARS_OUTPUT = None,
+):
+    """ED visit % by HHS region."""
+    rows = get_hhs_region_trends(pathogen=pathogen, region=region, start_date=start, end_date=end)
+    rows.sort(key=lambda r: (r.get("geo_value", ""), r.get("time_value", 0)))
+    _print_rows(rows, format, output)
+
+
+# ── nis ───────────────────────────────────────────────────────────────────────
+
+
+@nis_app.command("list")
+def cmd_nis_list(survey: Annotated[str, typer.Argument(help="child|teen")]):
+    """List available years for a NIS survey."""
+    years = list_years(survey)
+    console.print(f"Available years for NIS-{survey.capitalize()}: {years[0]}–{years[-1]}")
+    console.print("  " + "  ".join(str(y) for y in years))
+
+
+@nis_app.command("stream")
+def cmd_nis_stream(
+    survey: Annotated[str, typer.Argument(help="child|teen")],
+    year: Annotated[int, typer.Argument()],
+    state: Annotated[
+        Optional[str], typer.Option("--state", help="FIPS ('06'), postal ('CA'), or full name")
+    ] = None,
+    vaccines: Annotated[
+        Optional[list[str]], typer.Option("--vaccines", help="Column names to stream")
+    ] = None,
+    limit: Annotated[Optional[int], typer.Option("--limit", help="Max records (buffered)")] = None,
+    format: Annotated[str, typer.Option("-f", "--format")] = "csv",
+    output: _WISQARS_OUTPUT = None,
+):
+    """Stream raw respondent records — no storage. DAT files are 50-200MB; this may take a while."""
+    cols = set(vaccines) if vaccines else None
+    err.print(f"[dim]Fetching SAS codebook and streaming NIS-{survey} {year}…[/dim]")
+    try:
+        gen = stream_records(survey, year, state=state, columns=cols)
+        rows = list(gen)
+        if limit:
+            rows = rows[:limit]
+    except (ValueError, RuntimeError) as e:
+        err.print(f"[red]Error:[/red] {e}")
+        raise typer.Exit(1)
+    _print_rows(rows, format, output)
+
+
+@nis_app.command("rates")
+def cmd_nis_rates(
+    survey: Annotated[str, typer.Argument(help="child|teen")],
+    year: Annotated[int, typer.Argument()],
+    state: Annotated[Optional[str], typer.Option("--state", help="Limit to one state")] = None,
+    vaccines: Annotated[
+        Optional[list[str]], typer.Option("--vaccines", help="UTD column names to aggregate")
+    ] = None,
+    format: _WISQARS_FORMAT = "table",
+    output: _WISQARS_OUTPUT = None,
+):
+    """State-level UTD vaccination rates."""
+    err.print(f"[dim]Fetching SAS codebook and streaming NIS-{survey} {year}…[/dim]")
+    try:
+        rows = get_vaccination_rates(survey, year, state=state, vaccines=vaccines)
+    except (ValueError, RuntimeError) as e:
+        err.print(f"[red]Error:[/red] {e}")
+        raise typer.Exit(1)
+    _print_rows(rows, format, output)
+
+
+@nis_app.command("national")
+def cmd_nis_national(
+    survey: Annotated[str, typer.Argument(help="child|teen")],
+    year: Annotated[int, typer.Argument()],
+    vaccines: Annotated[
+        Optional[list[str]], typer.Option("--vaccines", help="UTD column names to aggregate")
+    ] = None,
+    format: _WISQARS_FORMAT = "table",
+    output: _WISQARS_OUTPUT = None,
+):
+    """National-level UTD vaccination rates."""
+    err.print(f"[dim]Fetching SAS codebook and streaming NIS-{survey} {year}…[/dim]")
+    try:
+        result = get_national_rates(survey, year, vaccines=vaccines)
+    except (ValueError, RuntimeError) as e:
+        err.print(f"[red]Error:[/red] {e}")
+        raise typer.Exit(1)
+    _print_rows([result] if result else [], format, output)
+
+
 # ── helpers ───────────────────────────────────────────────────────────────────
+
+
+def _print_rows(rows: list[dict], format: str, output: Optional[Path]) -> None:
+    """Render a list of row dicts (SEER / CDC Open results) as table|csv|json."""
+    if not rows:
+        console.print("[yellow]No data returned.[/yellow]")
+        return
+
+    if format == "json":
+        text = json.dumps(rows, indent=2, default=str)
+        if output:
+            output.write_text(text)
+        else:
+            print(text)
+        return
+
+    fieldnames = list(rows[0].keys())
+    if format == "csv":
+        buf = io.StringIO()
+        writer = csv.DictWriter(buf, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+        text = buf.getvalue()
+        if output:
+            output.write_text(text)
+        else:
+            print(text, end="")
+        return
+
+    if format == "table":
+        t = Table(
+            box=box.ROUNDED, show_header=True, header_style="bold", border_style="dim"
+        )
+        for h in fieldnames:
+            t.add_column(h)
+        for row in rows:
+            t.add_row(*[str(row.get(h, "")) for h in fieldnames])
+        console.print(t)
+        console.print(f"[dim]{len(rows)} rows[/dim]")
+        if output:
+            buf = io.StringIO()
+            writer = csv.DictWriter(buf, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
+            output.write_text(buf.getvalue())
+            console.print(f"[green]✓[/green] Saved to {output}")
+        return
+
+    err.print(f"[red]Unknown format: {format!r}. Use: table|csv|json[/red]")
+    raise typer.Exit(1)
 
 
 def _output_response(
