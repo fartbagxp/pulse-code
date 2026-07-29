@@ -48,6 +48,41 @@ def test_search_returns_matches():
     assert "D176" in result.stdout or "D77" in result.stdout
 
 
+def test_search_surfaces_other_source_hits():
+    import json
+
+    result = runner.invoke(app, ["search", "measles", "--json"])
+    assert result.exit_code == 0
+    data = json.loads(result.stdout)
+    assert any(h["source"] == "cdc-open" for h in data["other_source_matches"])
+
+
+def test_search_other_hits_empty_for_nonsense_query():
+    import json
+
+    result = runner.invoke(app, ["search", "zzzzznotarealtopiczzzz", "--json"])
+    assert result.exit_code == 0
+    data = json.loads(result.stdout)
+    assert data["other_source_matches"] == []
+
+
+def test_sources_lists_all_seven():
+    result = runner.invoke(app, ["sources"])
+    assert result.exit_code == 0
+    for name in ["WONDER", "SEER", "CDC Open Data", "WISQARS", "GRASP", "NSSP", "NIS"]:
+        assert name in result.stdout
+
+
+def test_sources_json_output_is_valid():
+    import json
+
+    result = runner.invoke(app, ["sources", "--json"])
+    assert result.exit_code == 0
+    data = json.loads(result.stdout)
+    assert len(data) == 7
+    assert all("command" in s for s in data)
+
+
 def test_topics_lists_categories():
     result = runner.invoke(app, ["topics"])
     assert result.exit_code == 0

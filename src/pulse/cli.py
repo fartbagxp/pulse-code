@@ -370,6 +370,33 @@ def cmd_info(
     console.print()
 
 
+def _search_other_sources(prompt: str, top_n: int = 5) -> list[dict]:
+    """Keyword search across the non-WONDER dataset registries (SEER, CDC Open
+    Data, WISQARS, GRASP). Simple case-insensitive substring match over each
+    dataset's name/description — good enough for "which source has this
+    topic" discovery; `pulse <source> list --search ...` still has the
+    per-source detail."""
+    q = prompt.lower()
+    hits: list[dict] = []
+
+    for key, ds in WISQARS_DATASETS.items():
+        if q in ds.name.lower() or q in ds.description.lower() or q in key.lower():
+            hits.append({"source": "wisqars", "key": key, "name": ds.name, "command": f"pulse wisqars query {key}"})
+
+    for key, ds in GRASP_DATASETS.items():
+        if q in ds.name.lower() or q in ds.description.lower() or q in key.lower():
+            hits.append({"source": "grasp", "key": key, "name": ds.name, "command": "pulse grasp list"})
+
+    for ds in cdc_open_datasets():
+        if q in ds.name.lower() or q in ds.description.lower() or q in ds.key.lower():
+            hits.append({"source": "cdc-open", "key": ds.key, "name": ds.name, "command": f"pulse cdc-open query {ds.key}"})
+
+    for code, name in search_cancer_sites(prompt):
+        hits.append({"source": "seer", "key": code, "name": name, "command": f"pulse seer mortality --site {code}"})
+
+    return hits[:top_n]
+
+
 # ── search ────────────────────────────────────────────────────────────────────
 
 
@@ -390,6 +417,7 @@ def cmd_search(
 
     ds_matches = match_datasets(prompt, catalog, top_n=top) if not queries_only else []
     q_matches = match_queries(prompt, catalog, top_n=top) if not datasets_only else []
+    other_hits = _search_other_sources(prompt, top_n=top)
 
     if json_out:
         print(
@@ -414,6 +442,7 @@ def cmd_search(
                         }
                         for m in q_matches
                     ],
+                    "other_source_matches": other_hits,
                 },
                 indent=2,
             )
@@ -459,6 +488,16 @@ def cmd_search(
                 m.query.filename,
                 m.query.description,
             )
+        console.print(t)
+
+    if other_hits:
+        console.print("[bold cyan]Other Sources (SEER · CDC Open Data · WISQARS · GRASP)[/bold cyan]")
+        t = Table(box=box.SIMPLE, show_header=True, header_style="bold")
+        t.add_column("Source", width=10)
+        t.add_column("Name")
+        t.add_column("Try")
+        for h in other_hits:
+            t.add_row(h["source"], h["name"], h["command"])
         console.print(t)
 
     console.print(
@@ -945,6 +984,170 @@ def cmd_topics():
     console.print(f"\n[dim]{sum(counts.values())} total datasets[/dim]\n")
 
 
+# ── sources ───────────────────────────────────────────────────────────────────
+
+
+@app.command("sources")
+def cmd_sources(json_out: Annotated[bool, typer.Option("--json")] = False):
+    """List every connected CDC/NCI/ATSDR data source and how to reach it."""
+    catalog = _get_catalog()
+    sources = [
+        {
+            "name": "WONDER",
+            "command": "pulse datasets / search / build / run / query / compare / chat",
+            "coverage": "Mortality, natality, environment, VAERS",
+            "count": len(catalog.datasets()),
+            "years": "1968–present",
+        },
+        {
+            "name": "SEER",
+            "command": "pulse seer sites / mortality / incidence / by-age / compare-sites",
+            "coverage": "Cancer incidence & mortality by site, sex, race, age",
+            "count": len(list_cancer_sites()),
+            "years": "1975–present",
+        },
+        {
+            "name": "CDC Open Data",
+            "command": "pulse cdc-open list / query",
+            "coverage": "Mortality, vaccination, wastewater, NNDSS, HAI, and more",
+            "count": len(cdc_open_datasets()),
+            "years": "varies",
+        },
+        {
+            "name": "WISQARS",
+            "command": "pulse wisqars mortality / national / state / county / tract / query",
+            "coverage": "Injury, firearm, overdose, homicide, suicide deaths by geography",
+            "count": len(WISQARS_DATASETS),
+            "years": "1999–present",
+        },
+        {
+            "name": "GRASP",
+            "command": "pulse grasp hantavirus / fluview / flusurv",
+            "coverage": "Hantavirus, ILI activity, clinical flu labs, flu hospitalizations",
+            "count": len(GRASP_DATASETS),
+            "years": "1993–present",
+        },
+        {
+            "name": "NSSP",
+            "command": "pulse nssp query / national / hhs",
+            "coverage": "ED visit % for COVID/flu/RSV, by geography",
+            "count": len(NSSP_SIGNALS),
+            "years": "2022–present",
+        },
+        {
+            "name": "NIS",
+            "command": "pulse nis list / stream / rates / national",
+            "coverage": "Childhood & teen vaccination coverage survey",
+            "count": 2,
+            "years": "2011–2022",
+        },
+    ]
+
+    if json_out:
+        print(json.dumps(sources, indent=2))
+        return
+
+    t = Table(box=box.ROUNDED, show_header=True, header_style="bold cyan", border_style="dim")
+    t.add_column("Source", style="bold yellow", width=15)
+    t.add_column("Coverage", ratio=1)
+    t.add_column("Datasets", justify="right", width=9)
+    t.add_column("Years", width=14)
+    t.add_column("Commands", style="dim")
+    for s in sources:
+        t.add_row(s["name"], s["coverage"], str(s["count"]), s["years"], s["command"])
+
+    console.print()
+    console.print(t)
+    console.print(
+        f"\n[dim]{len(sources)} sources  |  "
+        f'[bold]pulse search "<topic>"[/bold] to search across all of them[/dim]\n'
+    )
+
+
+# ── doctor ────────────────────────────────────────────────────────────────────
+
+_DOCTOR_ENDPOINTS = [
+    ("WONDER", "https://wonder.cdc.gov/"),
+    ("SEER", "https://seer.cancer.gov/statistics-network/explorer/"),
+    ("CDC Open Data / WISQARS", "https://data.cdc.gov/resource/bi63-dtpu.json?$limit=1"),
+    ("GRASP", "https://gis.cdc.gov/grasp/HantavirusCaseViewAPI/GetData_JSON?appVersion=Public"),
+    ("GRASP / NSSP (Delphi)", "https://api.delphi.cmu.edu/epidata/covidcast_meta/"),
+    # A specific year's file, not the bare directory listing — the directory
+    # itself returns 200 even though CDC has since moved individual NIS-Child
+    # files off this legacy path for years 2015+, which is the actual break.
+    ("NIS", "https://ftp.cdc.gov/pub/health_statistics/nchs/datasets/nis/NISPUF22-formats.sas"),
+]
+
+
+def _check_url(url: str, timeout: float = 8.0) -> tuple[bool, str]:
+    import time
+
+    import requests
+
+    start = time.monotonic()
+    try:
+        resp = requests.get(url, timeout=timeout, headers={"User-Agent": "pulse-doctor"})
+        elapsed = (time.monotonic() - start) * 1000
+        # A 404 means the specific resource moved/vanished (a real break, as
+        # opposed to e.g. a 403 on a root path that just wants different
+        # params) — treated as a failure regardless of endpoint, everything
+        # else under 500 counts as "the host is up and responding."
+        ok = resp.status_code != 404 and resp.status_code < 500
+        return ok, f"HTTP {resp.status_code}  {elapsed:.0f}ms"
+    except requests.RequestException as e:
+        return False, f"{type(e).__name__}: {e}"
+
+
+@app.command("doctor")
+def cmd_doctor():
+    """Check LLM credentials and live reachability of every connected data source."""
+    import os
+
+    console.print("\n[bold]pulse doctor[/bold]\n")
+
+    # LLM provider — informational only, most commands don't need it.
+    provider = os.environ.get("LLM_PROVIDER", "anthropic")
+    if provider == "azure_openai":
+        required = ["AZURE_OPENAI_API_KEY", "AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_DEPLOYMENT", "AZURE_OPENAI_API_VERSION"]
+        missing = [v for v in required if not os.environ.get(v)]
+        llm_ok = not missing
+        llm_detail = "all set" if llm_ok else f"missing: {', '.join(missing)}"
+    else:
+        llm_ok = bool(os.environ.get("ANTHROPIC_API_KEY"))
+        llm_detail = "ANTHROPIC_API_KEY set" if llm_ok else "ANTHROPIC_API_KEY not set"
+
+    t = Table(box=box.ROUNDED, show_header=True, header_style="bold cyan", border_style="dim")
+    t.add_column("Check", width=26)
+    t.add_column("Status", width=8)
+    t.add_column("Detail")
+    t.add_row(
+        f"LLM provider ({provider})",
+        "[green]OK[/green]" if llm_ok else "[yellow]WARN[/yellow]",
+        llm_detail + "  [dim](only needed for build/query/refine/compare/chat)[/dim]",
+    )
+
+    console.print("[dim]Checking live reachability of each source (~5-10s)…[/dim]")
+    all_reachable = True
+    for name, url in _DOCTOR_ENDPOINTS:
+        ok, detail = _check_url(url)
+        all_reachable = all_reachable and ok
+        t.add_row(name, "[green]OK[/green]" if ok else "[red]FAIL[/red]", detail)
+
+    console.print()
+    console.print(t)
+
+    if not all_reachable:
+        console.print(
+            "\n[yellow]One or more sources are unreachable right now — could be a network issue, "
+            "a proxy requirement (see LLM_HTTP_PROXY), or the upstream API/URL has moved. "
+            "The NIS check in particular is known-broken as of this writing (CDC restructured "
+            "its file hosting) — see the pulse README.[/yellow]"
+        )
+        raise typer.Exit(1)
+
+    console.print("\n[green]All sources reachable.[/green]\n")
+
+
 # ── list-queries ──────────────────────────────────────────────────────────────
 
 
@@ -1001,6 +1204,131 @@ def cmd_list_queries(
     console.print(
         f"\n[dim]{len(queries)} bundled queries  ·  Run: [bold]pulse run <filename>[/bold][/dim]\n"
     )
+
+
+# ── graduate ──────────────────────────────────────────────────────────────────
+
+_GRADUATE_TEMPLATE = '''"""
+{title}
+
+Generated by `pulse graduate` from {source_filename} (dataset {dataset_id}).
+This is a starting point, not a replica of health's hand-tuned fetch_*.py
+scripts: it writes one row per record using CDC WONDER's own column labels
+(via get_column_headers() + parse_response_to_arrays()), rather than the semantic column names,
+multi-dataset merging, and rate calculations those scripts often add by
+hand — rename columns / merge datasets / add derived rates as needed once
+this is in place. See src/wonder/queries/fetch_maternal_mortality.py in this
+repo for what a fully hand-tuned example looks like.
+
+Setup (this script assumes it lives in src/wonder/queries/ alongside the
+source XML):
+  1. Copy {source_filename} into src/wonder/queries/ next to this file.
+  2. Review the output CSV once and adjust column names/types as needed.
+
+Usage:
+    uv run python src/wonder/queries/{script_filename}
+"""
+'''
+
+
+@app.command("graduate")
+def cmd_graduate(
+    query_file: Annotated[
+        str, typer.Argument(help="Path to XML query file, or bundled query filename")
+    ],
+    output: Annotated[
+        Optional[Path],
+        typer.Option("-o", "--output", help="Save the generated script to a file"),
+    ] = None,
+):
+    """Generate a health-style fetch_*.py starter script from a saved query.
+
+    Writes Python, not to health directly — copy the output (and the source
+    XML) into health's src/wonder/queries/ yourself once you're happy with it.
+    """
+    path = Path(query_file)
+    if not path.exists():
+        bundled = _QUERIES_DIR / query_file
+        if bundled.exists():
+            path = bundled
+        else:
+            err.print(f"[red]File not found: {query_file}[/red]")
+            raise typer.Exit(1)
+
+    xml = path.read_text()
+    dataset_id = WonderClient._extract_dataset_id(xml)
+    if not dataset_id:
+        err.print("[red]Could not find a dataset_code in this query's request-parameters.[/red]")
+        raise typer.Exit(1)
+
+    stem = path.stem.removesuffix("-req")
+    slug = stem.replace("-", "_")
+    script_filename = f"fetch_{slug}.py"
+    csv_filename = f"{stem}.csv"
+
+    catalog = _get_catalog()
+    ds = catalog.dataset(dataset_id)
+    title = ds.title if ds else stem.replace("_", " ").title()
+
+    header = _GRADUATE_TEMPLATE.format(
+        title=title,
+        source_filename=path.name,
+        dataset_id=dataset_id,
+        script_filename=script_filename,
+    )
+
+    body = f'''
+import csv
+import sys
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(PROJECT_ROOT / "src"))
+
+from wonder.client import WonderClient  # noqa: E402
+
+QUERY_FILE = Path(__file__).parent / "{path.name}"
+OUTPUT_DIR = PROJECT_ROOT / "data" / "raw" / "wonder"
+DATASET_ID = "{dataset_id}"
+
+
+def main() -> None:
+    client = WonderClient(timeout=120)
+    print(f"Fetching {{DATASET_ID}} from CDC WONDER ...")
+
+    xml = client.execute_query_file(str(QUERY_FILE))
+    headers = client.get_column_headers(xml)
+    rows = client.parse_response_to_arrays(xml)
+    if not rows:
+        print("No data returned — check errors above.", file=sys.stderr)
+        sys.exit(1)
+
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    out_path = OUTPUT_DIR / "{csv_filename}"
+    with open(out_path, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(headers)
+        writer.writerows(rows)
+
+    print(f"  wrote {{len(rows)}} rows -> {{out_path}}")
+
+
+if __name__ == "__main__":
+    main()
+'''
+
+    script = header + body
+
+    if output:
+        output.write_text(script)
+        console.print(f"[green]✓[/green] Saved to [bold]{output}[/bold]")
+        console.print(
+            f"[dim]Next: copy {output} and {path.name} into health's "
+            f"src/wonder/queries/, review the output columns, then wire it "
+            f"into a scheduled workflow there.[/dim]\n"
+        )
+    else:
+        print(script)
 
 
 # ── seer ──────────────────────────────────────────────────────────────────────
