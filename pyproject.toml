@@ -4,25 +4,25 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pulse-code"
-version = "1.0.1"
+version = "1.0.2"
 description = "CDC WONDER query CLI — explore, build, and refine public health data queries"
 readme = "README.md"
 license = "CC0-1.0"
 requires-python = ">=3.14"
 dependencies = [
-    "anthropic==0.115.1",
-    "openai==2.44.0",
+    "anthropic==0.120.2",
+    "openai==2.50.0",
     "pydantic==2.13.4",
     "python-dotenv==1.2.2",
     "requests==2.34.2",
     "rich==15.0.0",
     "socksio==1.0.0",
-    "typer==0.26.8",
+    "typer==0.27.0",
 ]
 
 [dependency-groups]
 dev = [
-    "pre-commit==4.6.0",
+    "pre-commit==4.6.1",
     "pytest==9.1.1",
 ]
 
