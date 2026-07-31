@@ -72,24 +72,30 @@ export LLM_HTTP_PROXY=socks5h://user:pass@host:port
 
 ## Commands
 
-### `pulse datasets` — what's available
+The CLI has five top-level commands: **`topics`** (browse by subject across all
+sources), **`source`** (browse/query one source), **`search`** (free-text find),
+plus **`doctor`** and **`generate`**. Every data source lives under `source`:
+`pulse source` for an overview, `pulse source <name>` for its datasets, and
+`pulse source <name> <verb> …` to query it (e.g. `pulse source seer mortality`).
+
+### `pulse source wonder datasets` — what's available
 
 ```bash
-pulse datasets                    # all datasets
-pulse datasets --topic Mortality  # filter by topic
-pulse datasets --json             # JSON output
+pulse source wonder datasets                    # all datasets
+pulse source wonder datasets --topic Mortality  # filter by topic
+pulse source wonder datasets --json             # JSON output
 ```
 
 Shows all 26+ CDC WONDER datasets with: topic, year range, what the data covers, number of bundled example queries, and whether age-adjusted rates are available.
 
 **Topics:** Mortality · Infant Mortality · Natality · Environment · Vaccine Safety · Infectious Disease
 
-### `pulse info <ID>` — deep dive on a dataset
+### `pulse source wonder info <ID>` — deep dive on a dataset
 
 ```bash
-pulse info D176    # Provisional Mortality (2018–present)
-pulse info D66     # Natality / birth data
-pulse info D8      # VAERS vaccine adverse events
+pulse source wonder info D176    # Provisional Mortality (2018–present)
+pulse source wonder info D66     # Natality / birth data
+pulse source wonder info D8      # VAERS vaccine adverse events
 ```
 
 Shows: subject description, available measures, key grouping dimensions, and all bundled example queries for that dataset.
@@ -104,134 +110,134 @@ pulse search "tick-borne disease cases" --queries   # queries only
 pulse search "recent COVID deaths" --datasets       # datasets only
 ```
 
-### `pulse list-queries` — all bundled example queries
+### `pulse source wonder list-queries` — all bundled example queries
 
 ```bash
-pulse list-queries
-pulse list-queries --dataset D176   # filter by dataset
+pulse source wonder list-queries
+pulse source wonder list-queries --dataset D176   # filter by dataset
 ```
 
 23 working XML queries covering: drug/opioid/fentanyl deaths, maternal mortality, births, COVID deaths by race, suicide, tick-borne diseases, racial mortality gap, infant mortality, heart disease vs. cancer, and more.
 
-### `pulse seer` — NCI SEER cancer statistics
+### `pulse source seer` — NCI SEER cancer statistics
 
 ```bash
-pulse seer sites --search breast              # look up a cancer site code
-pulse seer mortality --site 55 --sex female -f csv
-pulse seer mortality --site 47 --compare-by race -f csv
-pulse seer incidence --site 55 --stage 104 -f csv
-pulse seer by-age --site 1 -f csv
-pulse seer compare-sites 55 47 66 -f csv       # breast vs. lung vs. melanoma
+pulse source seer sites --search breast              # look up a cancer site code
+pulse source seer mortality --site 55 --sex female -f csv
+pulse source seer mortality --site 47 --compare-by race -f csv
+pulse source seer incidence --site 55 --stage 104 -f csv
+pulse source seer by-age --site 1 -f csv
+pulse source seer compare-sites 55 47 66 -f csv       # breast vs. lung vs. melanoma
 ```
 
 Cancer incidence and U.S. mortality rates/counts by site, sex, race, and age group, back to 1975 — calls the same unauthenticated JSON endpoints [SEER*Explorer](https://seer.cancer.gov/statistics-network/explorer/) itself uses. No API key needed.
 
-### `pulse cdc-open` — CDC Open Data (data.cdc.gov)
+### `pulse source cdc-open` — CDC Open Data (data.cdc.gov)
 
 ```bash
-pulse cdc-open list                            # 60+ datasets: mortality, vaccination, wastewater, NNDSS, HAI, and more
-pulse cdc-open list --search wastewater
-pulse cdc-open query leading_death --where "year='2015'" -f csv
-pulse cdc-open query bi63-dtpu --where "state='California'" --limit 500 -f json
+pulse source cdc-open list                            # 60+ datasets: mortality, vaccination, wastewater, NNDSS, HAI, and more
+pulse source cdc-open list --search wastewater
+pulse source cdc-open query leading_death --where "year='2015'" -f csv
+pulse source cdc-open query bi63-dtpu --where "state='California'" --limit 500 -f json
 ```
 
 Raw [SODA](https://dev.socrata.com/) queries (`--where`, `--select`, `--group`, `--order`) against any of the registered Socrata datasets, by registry key or by Socrata ID directly. No API key needed (set `CDC_DATA_APP_TOKEN` for a higher rate limit).
 
-### `pulse wisqars` — WISQARS injury & violence data
+### `pulse source wisqars` — WISQARS injury & violence data
 
 ```bash
-pulse wisqars list
-pulse wisqars mortality --intent Suicide --mechanism Firearm -f csv       # 1999-2016
-pulse wisqars national --intent FA_Deaths --type year -f csv             # 2019-present
-pulse wisqars state --intent Drug_OD --year 2023 -f table
-pulse wisqars county --state Texas --intent FA_Deaths --year 2023
-pulse wisqars tract --state Texas --intent All_Homicide --year 2022      # census-tract granularity
-pulse wisqars query t6u2-f84c --where "intent='Drug_OD' AND type='year'"
+pulse source wisqars list
+pulse source wisqars mortality --intent Suicide --mechanism Firearm -f csv       # 1999-2016
+pulse source wisqars national --intent FA_Deaths --type year -f csv             # 2019-present
+pulse source wisqars state --intent Drug_OD --year 2023 -f table
+pulse source wisqars county --state Texas --intent FA_Deaths --year 2023
+pulse source wisqars tract --state Texas --intent All_Homicide --year 2022      # census-tract granularity
+pulse source wisqars query t6u2-f84c --where "intent='Drug_OD' AND type='year'"
 ```
 
 Fatal firearm/suicide/homicide/drug-overdose data from [WISQARS](https://wisqars.cdc.gov/) at national, state, county, and census-tract granularity, backed by data.cdc.gov Socrata datasets (same client as `cdc-open`). No API key needed.
 
-### `pulse grasp` — ATSDR GRASP disease surveillance
+### `pulse source grasp` — ATSDR GRASP disease surveillance
 
 ```bash
-pulse grasp list
-pulse grasp hantavirus cases --outcome Dead -f table              # pre-1993-present
-pulse grasp hantavirus by-year -f table
-pulse grasp hantavirus by-state -f table
-pulse grasp fluview ili-data --region nat --region ca --region tx --epiweeks 202001-202026
-pulse grasp fluview ili-by-region --epiweeks 201940-202020 -f table
-pulse grasp fluview clinical-data --region nat --epiweeks 202001-202026
-pulse grasp flusurv data --location CA --location OH --epiweeks 202001-202020 -f csv
-pulse grasp flusurv by-season --location CA -f table
-pulse grasp flusurv by-location --season 2019-20 -f table
+pulse source grasp list
+pulse source grasp hantavirus cases --outcome Dead -f table              # pre-1993-present
+pulse source grasp hantavirus by-year -f table
+pulse source grasp hantavirus by-state -f table
+pulse source grasp fluview ili-data --region nat --region ca --region tx --epiweeks 202001-202026
+pulse source grasp fluview ili-by-region --epiweeks 201940-202020 -f table
+pulse source grasp fluview clinical-data --region nat --epiweeks 202001-202026
+pulse source grasp flusurv data --location CA --location OH --epiweeks 202001-202020 -f csv
+pulse source grasp flusurv by-season --location CA -f table
+pulse source grasp flusurv by-location --season 2019-20 -f table
 ```
 
 Hantavirus case data, FluView ILINet influenza-like-illness activity, WHO/NREVSS clinical lab flu positivity, and FluSurv-NET hospitalization rates — sourced from [gis.cdc.gov/grasp](https://gis.cdc.gov/grasp/) and the CMU Delphi Epidata API. No API key needed. Note: repeatable options like `--region`/`--location` take one value per flag (`--region nat --region ca`), unlike `health`'s argparse CLI which accepts space-separated lists after a single flag.
 
-### `pulse nssp` — emergency department visit surveillance
+### `pulse source nssp` — emergency department visit surveillance
 
 ```bash
-pulse nssp query covid --geo-type state --geo-value ca -f csv
-pulse nssp query influenza --geo-type nation --geo-value us
-pulse nssp national --start 202401 -f csv                # all 4 pathogens, national
-pulse nssp hhs rsv --region 4 -f table
+pulse source nssp query covid --geo-type state --geo-value ca -f csv
+pulse source nssp query influenza --geo-type nation --geo-value us
+pulse source nssp national --start 202401 -f csv                # all 4 pathogens, national
+pulse source nssp hhs rsv --region 4 -f table
 ```
 
 Weekly % of ED visits attributed to COVID/flu/RSV from the [National Syndromic Surveillance Program](https://www.cdc.gov/nssp/), via the CMU Delphi Epidata API. Time values use epiweek format (`YYYYWW`, e.g. `202518` = week 18 of 2025). No API key needed.
 
-### `pulse nis` — National Immunization Survey (vaccination coverage)
+### `pulse source nis` — National Immunization Survey (vaccination coverage)
 
 ```bash
-pulse nis list child                                       # available years, 2011-2022
-pulse nis stream child 2022 --limit 10 -f json              # raw respondent microdata
-pulse nis rates child 2022 -f table                         # state-level UTD rates
-pulse nis rates teen 2022 --vaccines P_UTDHPV13 -f csv
-pulse nis national child 2022                                # national UTD summary
+pulse source nis list child                                       # available years, 2011-2022
+pulse source nis stream child 2022 --limit 10 -f json              # raw respondent microdata
+pulse source nis rates child 2022 -f table                         # state-level UTD rates
+pulse source nis rates teen 2022 --vaccines P_UTDHPV13 -f csv
+pulse source nis national child 2022                                # national UTD summary
 ```
 
 Childhood (19–35mo) and teen (13–17yr) vaccination coverage from CDC's annual random-digit-dial survey. Files are large fixed-width `.dat` files (50–200MB) streamed directly — nothing is written to disk. **Known issue:** CDC has restructured its NIS file hosting since this registry's URLs were last verified (some years now live under `www.cdc.gov/nis/media/files/...` or `ftp.cdc.gov/pub/Vaccines_NIS/` instead of the legacy `ftp.cdc.gov/.../nis/NISPUF{YY}-formats.sas` path baked into `nis_catalog.py`), so live `stream`/`rates`/`national` calls currently 404 for at least the 2015+ years — the same pre-existing gap affects `health`'s own `nis` module. The CLI plumbing and DAT-streaming parser are unit-tested and correct; only the hardcoded per-year URLs need refreshing against CDC's current hosting.
 
-### `pulse run <query>` — execute a query
+### `pulse source wonder run <query>` — execute a query
 
 ```bash
 # Run a bundled query by filename (no path needed)
-pulse run drug-deaths-by-year-2018-2024-req.xml
+pulse source wonder run drug-deaths-by-year-2018-2024-req.xml
 
 # Output formats
-pulse run opioid-overdose-deaths-2018-2024-req.xml -f csv
-pulse run mortality-by-year-cause-2021-2024-req.xml -f json
-pulse run births-by-year-2007-2024-req.xml -f table -o births.csv
+pulse source wonder run opioid-overdose-deaths-2018-2024-req.xml -f csv
+pulse source wonder run mortality-by-year-cause-2021-2024-req.xml -f json
+pulse source wonder run births-by-year-2007-2024-req.xml -f table -o births.csv
 
 # Run your own query file
-pulse run /path/to/my-query.xml
+pulse source wonder run /path/to/my-query.xml
 ```
 
 Hits the live CDC WONDER API. No login required; CDC requires a ~2-minute cooldown between queries.
 
-### `pulse build "<description>"` — build a query with Claude
+### `pulse source wonder build "<description>"` — build a query with Claude
 
 ```bash
 # Requires ANTHROPIC_API_KEY
-pulse build "drug overdose deaths by state and year 2018-2023"
-pulse build "maternal mortality by race, 2018-2023" -o maternal-race.xml
-pulse build "birth rates by age of mother 2010 to 2024" --no-suggest
+pulse source wonder build "drug overdose deaths by state and year 2018-2023"
+pulse source wonder build "maternal mortality by race, 2018-2023" -o maternal-race.xml
+pulse source wonder build "birth rates by age of mother 2010 to 2024" --no-suggest
 ```
 
 Suggests closest existing queries first, then calls Claude to build a new XML query. The LLM selects the right dataset and generates overrides merged onto a validated base template.
 
-### `pulse query "<description>"` — build and run in one step
+### `pulse source wonder query "<description>"` — build and run in one step
 
 ```bash
-pulse query "fentanyl deaths by state 2020-2024" -f csv
-pulse query "infant mortality by race 2018-2023" --save-xml infant-race.xml
+pulse source wonder query "fentanyl deaths by state 2020-2024" -f csv
+pulse source wonder query "infant mortality by race 2018-2023" --save-xml infant-race.xml
 ```
 
-### `pulse refine <file> "<feedback>"` — iterate on a query
+### `pulse source wonder refine <file> "<feedback>"` — iterate on a query
 
 ```bash
-pulse refine opioid-overdose-deaths-2018-2024-req.xml "break it down by state"
-pulse refine drug-deaths-by-year-2018-2024-req.xml "add sex breakdown" -o drug-sex.xml
-pulse refine drug-deaths-by-year-2018-2024-req.xml "show monthly not yearly" --run -f csv
+pulse source wonder refine opioid-overdose-deaths-2018-2024-req.xml "break it down by state"
+pulse source wonder refine drug-deaths-by-year-2018-2024-req.xml "add sex breakdown" -o drug-sex.xml
+pulse source wonder refine drug-deaths-by-year-2018-2024-req.xml "show monthly not yearly" --run -f csv
 ```
 
 ## Testing

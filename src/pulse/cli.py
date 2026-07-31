@@ -16,6 +16,7 @@ from rich.panel import Panel
 from rich.prompt import Prompt
 from rich.table import Table
 from rich.text import Text
+from typer.core import TyperGroup
 
 from pulse.catalog import Catalog
 from pulse.cdc_open_catalog import dataset as cdc_open_dataset
@@ -49,6 +50,8 @@ from pulse.seer_sdk import (
     search_cancer_sites,
 )
 from pulse.soda_client import SodaClient
+from pulse.sources_registry import SOURCE_DATASET_FNS
+from pulse.topics_registry import TOPICS, find_topic
 from pulse.wisqars_catalog import DATASETS as WISQARS_DATASETS
 from pulse.wisqars_catalog import INJURY_INTENTS, INJURY_MECHANISMS, MAPPING_INTENTS, MAPPING_PERIOD_TYPES
 from pulse.wisqars_sdk import (
@@ -61,31 +64,111 @@ from pulse.wisqars_sdk import (
 from pulse.wisqars_sdk import query_dataset as wisqars_query_dataset
 from pulse.wonder_client import WonderClient
 
+class _AlignedHelpGroup(TyperGroup):
+    """Root-only help renderer.
+
+    Typer draws the Options and Commands panels as two independently-sized
+    tables, so their description columns don't line up (Options also carries
+    extra empty sub-columns for short flags / arg types that push its text
+    further right). This override renders both panels with a single shared
+    first-column width, so `--help` and the command descriptions start at the
+    same column. Only the top-level `pulse` help uses this class; subcommand
+    help keeps Typer's stock rich rendering.
+    """
+
+    def format_help(self, ctx, formatter):
+        con = Console()
+
+        con.print()
+        con.print(
+            Text(f"Usage: {ctx.command_path} " + " ".join(self.collect_usage_pieces(ctx))),
+            highlight=False,
+        )
+        if self.help:
+            con.print()
+            con.print(Text(" " + self.help.strip()), highlight=False)
+
+        option_rows = [
+            rec for p in self.get_params(ctx) if (rec := p.get_help_record(ctx)) is not None
+        ]
+        command_rows = []
+        for name in self.list_commands(ctx):
+            cmd = self.get_command(ctx, name)
+            if cmd is None or getattr(cmd, "hidden", False):
+                continue
+            # Big limit so the table wraps long help instead of truncating with "…".
+            command_rows.append((name, cmd.get_short_help_str(limit=10_000)))
+
+        # The shared width that makes both panels line up.
+        name_width = max(
+            [len(n) for n, _ in option_rows] + [len(n) for n, _ in command_rows],
+            default=0,
+        )
+
+        def _panel(title: str, rows: list, name_style: str) -> None:
+            t = Table(box=None, show_header=False, expand=True, pad_edge=False, padding=(0, 1))
+            t.add_column(style=name_style, no_wrap=True, width=name_width)
+            t.add_column(ratio=1, no_wrap=False)
+            for name, help_text in rows:
+                t.add_row(Text(name), Text(help_text or ""))
+            con.print(Panel(t, title=title, title_align="left", border_style="dim"))
+
+        if option_rows:
+            con.print()
+            _panel("Options", option_rows, "cyan")
+        if command_rows:
+            _panel("Commands", command_rows, "bold cyan")
+
+
 app = typer.Typer(
     name="pulse",
-    help="CDC public health data query CLI — explore, build, and refine.",
+    cls=_AlignedHelpGroup,
+    help="CDC public health data query CLI — explore, build, and refine. "
+    "New here? Start with `pulse topics` to browse by subject (mortality, cancer, vaccination, ...) "
+    "instead of by CDC's source structure.",
     add_completion=False,
     no_args_is_help=True,
+)
+# `source` is a group that does double duty: bare `pulse source` prints the
+# 7-source overview, `pulse source <name>` prints that source's dataset list,
+# and `pulse source <name> <verb>` runs a query. Each source sub-app therefore
+# uses invoke_without_command (not no_args_is_help) so a bare invocation runs
+# its listing callback instead of dumping --help.
+source_app = typer.Typer(
+    help="Browse and query CDC data by source — bare for an overview, `source <name>` for its datasets.",
+    add_completion=False,
+    no_args_is_help=False,
+    invoke_without_command=True,
+)
+wonder_app = typer.Typer(
+    help="CDC WONDER — mortality, natality, environment, VAERS (query builder + LLM flow).",
+    add_completion=False,
+    no_args_is_help=False,
+    invoke_without_command=True,
 )
 seer_app = typer.Typer(
     help="NCI SEER cancer incidence/mortality statistics.",
     add_completion=False,
-    no_args_is_help=True,
+    no_args_is_help=False,
+    invoke_without_command=True,
 )
 cdc_open_app = typer.Typer(
     help="CDC Open Data (data.cdc.gov) — respiratory, vaccination, mortality, and more.",
     add_completion=False,
-    no_args_is_help=True,
+    no_args_is_help=False,
+    invoke_without_command=True,
 )
 wisqars_app = typer.Typer(
     help="WISQARS injury mortality and violence data.",
     add_completion=False,
-    no_args_is_help=True,
+    no_args_is_help=False,
+    invoke_without_command=True,
 )
 grasp_app = typer.Typer(
     help="ATSDR GRASP disease APIs — hantavirus, FluView, FluSurv-NET.",
     add_completion=False,
-    no_args_is_help=True,
+    no_args_is_help=False,
+    invoke_without_command=True,
 )
 grasp_hantavirus_app = typer.Typer(
     help="Hantavirus case data (pre-1993–present).",
@@ -105,22 +188,26 @@ grasp_flusurv_app = typer.Typer(
 nssp_app = typer.Typer(
     help="NSSP emergency department visit signals (COVID/flu/RSV).",
     add_completion=False,
-    no_args_is_help=True,
+    no_args_is_help=False,
+    invoke_without_command=True,
 )
 nis_app = typer.Typer(
     help="NIS childhood/teen vaccination survey (fixed-width DAT streaming).",
     add_completion=False,
-    no_args_is_help=True,
+    no_args_is_help=False,
+    invoke_without_command=True,
 )
-app.add_typer(seer_app, name="seer")
-app.add_typer(cdc_open_app, name="cdc-open")
-app.add_typer(wisqars_app, name="wisqars")
-app.add_typer(grasp_app, name="grasp")
+app.add_typer(source_app, name="source")
+source_app.add_typer(wonder_app, name="wonder")
+source_app.add_typer(seer_app, name="seer")
+source_app.add_typer(cdc_open_app, name="cdc-open")
+source_app.add_typer(wisqars_app, name="wisqars")
+source_app.add_typer(grasp_app, name="grasp")
 grasp_app.add_typer(grasp_hantavirus_app, name="hantavirus")
 grasp_app.add_typer(grasp_fluview_app, name="fluview")
 grasp_app.add_typer(grasp_flusurv_app, name="flusurv")
-app.add_typer(nssp_app, name="nssp")
-app.add_typer(nis_app, name="nis")
+source_app.add_typer(nssp_app, name="nssp")
+source_app.add_typer(nis_app, name="nis")
 console = Console()
 err = Console(stderr=True)
 
@@ -171,7 +258,7 @@ def _reference_queries(
 # ── datasets ──────────────────────────────────────────────────────────────────
 
 
-@app.command("datasets")
+@wonder_app.command("datasets")
 def cmd_datasets(
     topic: Annotated[
         Optional[str], typer.Option("--topic", "-t", help="Filter by topic")
@@ -248,25 +335,25 @@ def cmd_datasets(
     console.print(table)
     all_topics = catalog.topics()
     console.print(
-        f"\n[dim]{len(datasets)} datasets across {len(all_topics)} topics  |  "
-        f"[bold]pulse topics[/bold] to list topics  |  "
-        f"[bold]pulse datasets --topic Cancer[/bold]  |  "
-        f"[bold]pulse info <ID>[/bold]  |  "
+        f"\n[dim]{len(datasets)} WONDER datasets across {len(all_topics)} topics  |  "
+        f"[bold]pulse topics[/bold] to browse by subject across all sources, not just WONDER  |  "
+        f"[bold]pulse source wonder datasets --topic Cancer[/bold]  |  "
+        f"[bold]pulse source wonder info <ID>[/bold]  |  "
         f'[bold]pulse search "<topic>"[/bold][/dim]'
     )
     if not topic:
         console.print(
             "[dim]Note: Immunization coverage data (NIS, VaxView, school vaccination) "
-            "is not in WONDER — try [bold]pulse cdc-open list --search vaccination[/bold]. "
+            "is not in WONDER — try [bold]pulse source cdc-open list --search vaccination[/bold]. "
             "WONDER does include VAERS vaccine adverse events (D8). Cancer incidence/mortality "
-            "by site is also outside WONDER — see [bold]pulse seer[/bold].[/dim]"
+            "by site is also outside WONDER — see [bold]pulse source seer[/bold].[/dim]"
         )
 
 
 # ── info ──────────────────────────────────────────────────────────────────────
 
 
-@app.command("info")
+@wonder_app.command("info")
 def cmd_info(
     dataset_id: Annotated[str, typer.Argument(help="Dataset ID (e.g. D176)")],
     json_out: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
@@ -276,7 +363,7 @@ def cmd_info(
     ds = catalog.dataset(dataset_id)
     if not ds:
         err.print(f"[red]Dataset {dataset_id!r} not found.[/red]")
-        err.print("Run [bold]pulse datasets[/bold] to see all available datasets.")
+        err.print("Run [bold]pulse source wonder datasets[/bold] to see all available datasets.")
         raise typer.Exit(1)
 
     bundled = catalog.queries_for_dataset(ds.id)
@@ -358,13 +445,13 @@ def cmd_info(
             )
         console.print(qt)
         console.print(
-            f"[dim]Run a bundled query: [bold]pulse run {bundled[0].filename}[/bold][/dim]"
+            f"[dim]Run a bundled query: [bold]pulse source wonder run {bundled[0].filename}[/bold][/dim]"
         )
     else:
         console.print("\n[dim]No bundled example queries for this dataset.[/dim]")
         if ds.has_template:
             console.print(
-                '[dim]Template available — use [bold]pulse build "<prompt>"[/bold] to generate a query.[/dim]'
+                '[dim]Template available — use [bold]pulse source wonder build "<prompt>"[/bold] to generate a query.[/dim]'
             )
 
     console.print()
@@ -381,18 +468,18 @@ def _search_other_sources(prompt: str, top_n: int = 5) -> list[dict]:
 
     for key, ds in WISQARS_DATASETS.items():
         if q in ds.name.lower() or q in ds.description.lower() or q in key.lower():
-            hits.append({"source": "wisqars", "key": key, "name": ds.name, "command": f"pulse wisqars query {key}"})
+            hits.append({"source": "wisqars", "key": key, "name": ds.name, "command": f"pulse source wisqars query {key}"})
 
     for key, ds in GRASP_DATASETS.items():
         if q in ds.name.lower() or q in ds.description.lower() or q in key.lower():
-            hits.append({"source": "grasp", "key": key, "name": ds.name, "command": "pulse grasp list"})
+            hits.append({"source": "grasp", "key": key, "name": ds.name, "command": "pulse source grasp list"})
 
     for ds in cdc_open_datasets():
         if q in ds.name.lower() or q in ds.description.lower() or q in ds.key.lower():
-            hits.append({"source": "cdc-open", "key": ds.key, "name": ds.name, "command": f"pulse cdc-open query {ds.key}"})
+            hits.append({"source": "cdc-open", "key": ds.key, "name": ds.name, "command": f"pulse source cdc-open query {ds.key}"})
 
     for code, name in search_cancer_sites(prompt):
-        hits.append({"source": "seer", "key": code, "name": name, "command": f"pulse seer mortality --site {code}"})
+        hits.append({"source": "seer", "key": code, "name": name, "command": f"pulse source seer mortality --site {code}"})
 
     return hits[:top_n]
 
@@ -501,15 +588,15 @@ def cmd_search(
         console.print(t)
 
     console.print(
-        f"\n[dim]Run a query: [bold]pulse run <filename>[/bold]  ·  "
-        f'Build new: [bold]pulse build "{prompt}"[/bold][/dim]\n'
+        f"\n[dim]Run a query: [bold]pulse source wonder run <filename>[/bold]  ·  "
+        f'Build new: [bold]pulse source wonder build "{prompt}"[/bold][/dim]\n'
     )
 
 
 # ── build ─────────────────────────────────────────────────────────────────────
 
 
-@app.command("build")
+@wonder_app.command("build")
 def cmd_build(
     prompt: Annotated[str, typer.Argument(help="Natural language query description")],
     output: Annotated[
@@ -530,7 +617,7 @@ def cmd_build(
         q_matches = match_queries(prompt, catalog, top_n=3)
         if q_matches and q_matches[0].score > 0.10:
             console.print(
-                "\n[dim]Closest existing queries — run these directly with [bold]pulse run <file>[/bold]:[/dim]"
+                "\n[dim]Closest existing queries — run these directly with [bold]pulse source wonder run <file>[/bold]:[/dim]"
             )
             for m in q_matches[:3]:
                 pct = int(m.score * 100)
@@ -570,7 +657,7 @@ def cmd_build(
     if output:
         output.write_text(xml)
         console.print(f"[green]✓[/green] Saved to [bold]{output}[/bold]")
-        console.print(f"[dim]Run it: [bold]pulse run {output}[/bold][/dim]\n")
+        console.print(f"[dim]Run it: [bold]pulse source wonder run {output}[/bold][/dim]\n")
     else:
         print(xml)
 
@@ -578,7 +665,7 @@ def cmd_build(
 # ── run ───────────────────────────────────────────────────────────────────────
 
 
-@app.command("run")
+@wonder_app.command("run")
 def cmd_run(
     query_file: Annotated[
         str, typer.Argument(help="Path to XML query file, or bundled query filename")
@@ -623,7 +710,7 @@ def cmd_run(
 # ── query ─────────────────────────────────────────────────────────────────────
 
 
-@app.command("query")
+@wonder_app.command("query")
 def cmd_query(
     prompt: Annotated[str, typer.Argument(help="Natural language query")],
     format: Annotated[
@@ -679,7 +766,7 @@ def cmd_query(
 _WONDER_RATE_LIMIT_SECONDS = 15
 
 
-@app.command("compare")
+@wonder_app.command("compare")
 def cmd_compare(
     prompt: Annotated[
         str,
@@ -762,7 +849,7 @@ def cmd_compare(
 # ── refine ────────────────────────────────────────────────────────────────────
 
 
-@app.command("refine")
+@wonder_app.command("refine")
 def cmd_refine(
     query_file: Annotated[str, typer.Argument(help="Existing XML query to refine")],
     feedback: Annotated[
@@ -831,7 +918,7 @@ def cmd_refine(
 # ── chat ──────────────────────────────────────────────────────────────────────
 
 
-@app.command("chat")
+@wonder_app.command("chat")
 def cmd_chat(
     initial_prompt: Annotated[
         Optional[str], typer.Argument(help="Optional first request to start with")
@@ -855,7 +942,7 @@ def cmd_chat(
     current_dataset_id: Optional[str] = None
 
     console.print(
-        "\n[bold]pulse chat[/bold] — describe a query, then refine it turn by turn."
+        "\n[bold]pulse source wonder chat[/bold] — describe a query, then refine it turn by turn."
     )
     console.print("[dim]Commands: :xml  :run  :save <path>  :reset  :exit[/dim]\n")
 
@@ -942,101 +1029,186 @@ def cmd_chat(
 
 
 @app.command("topics")
-def cmd_topics():
-    """List all dataset topics and dataset counts."""
-    catalog = _get_catalog()
-    from collections import Counter
+def cmd_topics(
+    topic: Annotated[
+        Optional[str], typer.Argument(help="Topic to drill into, e.g. mortality, cancer")
+    ] = None,
+    json_out: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+):
+    """Browse CDC data by topic — mortality, cancer, vaccination coverage, etc. — across all seven sources."""
+    if topic is None:
+        if json_out:
+            print(
+                json.dumps(
+                    [
+                        {
+                            "key": t.key,
+                            "label": t.label,
+                            "description": t.description,
+                            "sources": [s.source for s in t.sources],
+                            "default_source": next((s.source for s in t.sources if s.is_default), t.sources[0].source),
+                        }
+                        for t in TOPICS
+                    ],
+                    indent=2,
+                )
+            )
+            return
 
-    counts = Counter(d.topic for d in catalog.datasets())
+        table = Table(box=box.ROUNDED, show_header=True, header_style="bold cyan", border_style="dim", expand=True)
+        table.add_column("Topic", style="bold", width=32, no_wrap=True)
+        table.add_column("Default Source", width=14, no_wrap=True)
+        table.add_column("Number of Sources", justify="right", width=17)
+        table.add_column("Example command", style="dim", ratio=1)
 
-    topic_colors = {
-        "Mortality": "red",
-        "Infant Mortality": "orange3",
-        "Fetal Deaths": "dark_orange",
-        "Natality": "green",
-        "Cancer": "bright_magenta",
-        "Infectious Disease": "cyan",
-        "STI / Sexual Health": "bright_cyan",
-        "Tuberculosis": "yellow",
-        "HIV/AIDS": "bright_red",
-        "Vaccine Safety": "magenta",
-        "Environment": "blue",
-        "Population": "dim",
-    }
+        for t in TOPICS:
+            default = next((s for s in t.sources if s.is_default), t.sources[0])
+            table.add_row(t.label, default.source, str(len(t.sources)), default.command)
 
-    t = Table(
-        box=box.ROUNDED, show_header=True, header_style="bold cyan", border_style="dim"
-    )
-    t.add_column("Topic", ratio=1)
-    t.add_column("Datasets", justify="right", width=9)
-    t.add_column("Filter command", style="dim")
-
-    for topic, count in sorted(counts.items(), key=lambda x: -x[1]):
-        color = topic_colors.get(topic, "white")
-        t.add_row(
-            Text(topic, style=color),
-            str(count),
-            f'pulse datasets --topic "{topic}"',
+        console.print()
+        console.print(table)
+        console.print(
+            f"\n[dim]{len(TOPICS)} topics  |  "
+            f'[bold]pulse topics "<topic>"[/bold] to see every source for one topic  |  '
+            f"[bold]pulse source <source>[/bold] for dataset-level detail[/dim]\n"
         )
+        return
+
+    match = find_topic(topic)
+    if match is None:
+        err.print(f"[red]No topic matching {topic!r}.[/red]")
+        err.print("Run [bold]pulse topics[/bold] to see all topics.")
+        raise typer.Exit(1)
+
+    if json_out:
+        print(
+            json.dumps(
+                {
+                    "key": match.key,
+                    "label": match.label,
+                    "description": match.description,
+                    "sources": [
+                        {
+                            "source": s.source,
+                            "coverage": s.coverage,
+                            "years": s.years,
+                            "command": s.command,
+                            "is_default": s.is_default,
+                        }
+                        for s in match.sources
+                    ],
+                },
+                indent=2,
+            )
+        )
+        return
 
     console.print()
-    console.print(t)
-    console.print(f"\n[dim]{sum(counts.values())} total datasets[/dim]\n")
+    console.print(
+        Panel(
+            f"[bold cyan]{match.label}[/bold cyan]\n[dim]{match.description}[/dim]",
+            border_style="cyan",
+            expand=False,
+        )
+    )
+
+    st = Table(box=box.SIMPLE, show_header=True, header_style="bold")
+    st.add_column("Source")
+    st.add_column("Coverage", ratio=1)
+    st.add_column("Years")
+    st.add_column("Command", style="dim")
+    for s in match.sources:
+        label = f"★ {s.source}" if s.is_default else s.source
+        st.add_row(label, s.coverage, s.years, s.command)
+
+    console.print()
+    console.print(st)
+    console.print(
+        f"\n[dim]★ = sensible default  |  "
+        f"[bold]pulse source {match.sources[0].source}[/bold] for the dataset-level list with URLs[/dim]\n"
+    )
 
 
 # ── sources ───────────────────────────────────────────────────────────────────
 
 
-@app.command("sources")
-def cmd_sources(json_out: Annotated[bool, typer.Option("--json")] = False):
-    """List every connected CDC/NCI/ATSDR data source and how to reach it."""
+def _render_source_datasets(key: str, json_out: bool) -> None:
+    """Render one source's dataset-level listing (key/title/years/URL + credit)."""
+    fn = SOURCE_DATASET_FNS[key]
+    rows = fn()
+
+    if json_out:
+        print(
+            json.dumps(
+                [{"key": r.key, "title": r.title, "url": r.url, "years": r.years, "credit": r.credit, "notes": r.notes} for r in rows],
+                indent=2,
+            )
+        )
+        return
+
+    t = Table(box=box.ROUNDED, show_header=True, header_style="bold cyan", border_style="dim", expand=True)
+    t.add_column("Key", style="bold yellow", width=14, no_wrap=True)
+    t.add_column("Title", ratio=1)
+    t.add_column("Years", width=14, no_wrap=True)
+    t.add_column("URL", style="dim")
+    for r in rows:
+        t.add_row(r.key, r.title, r.years, r.url)
+
+    credit = rows[0].credit if rows else ""
+    console.print()
+    console.print(t)
+    console.print(f"\n[dim]{len(rows)} datasets  |  Credit: {credit}[/dim]\n")
+
+
+def _render_source_overview(json_out: bool) -> None:
+    """Render the top-level overview of all seven connected sources."""
     catalog = _get_catalog()
     sources = [
         {
             "name": "WONDER",
-            "command": "pulse datasets / search / build / run / query / compare / chat",
+            "command": "pulse source wonder datasets / build / run / query / compare / chat",
             "coverage": "Mortality, natality, environment, VAERS",
             "count": len(catalog.datasets()),
             "years": "1968–present",
         },
         {
             "name": "SEER",
-            "command": "pulse seer sites / mortality / incidence / by-age / compare-sites",
+            "command": "pulse source seer sites / mortality / incidence / by-age / compare-sites",
             "coverage": "Cancer incidence & mortality by site, sex, race, age",
             "count": len(list_cancer_sites()),
             "years": "1975–present",
         },
         {
             "name": "CDC Open Data",
-            "command": "pulse cdc-open list / query",
+            "command": "pulse source cdc-open list / query",
             "coverage": "Mortality, vaccination, wastewater, NNDSS, HAI, and more",
             "count": len(cdc_open_datasets()),
             "years": "varies",
         },
         {
             "name": "WISQARS",
-            "command": "pulse wisqars mortality / national / state / county / tract / query",
+            "command": "pulse source wisqars mortality / national / state / county / tract / query",
             "coverage": "Injury, firearm, overdose, homicide, suicide deaths by geography",
             "count": len(WISQARS_DATASETS),
             "years": "1999–present",
         },
         {
             "name": "GRASP",
-            "command": "pulse grasp hantavirus / fluview / flusurv",
+            "command": "pulse source grasp hantavirus / fluview / flusurv",
             "coverage": "Hantavirus, ILI activity, clinical flu labs, flu hospitalizations",
             "count": len(GRASP_DATASETS),
             "years": "1993–present",
         },
         {
             "name": "NSSP",
-            "command": "pulse nssp query / national / hhs",
+            "command": "pulse source nssp query / national / hhs",
             "coverage": "ED visit % for COVID/flu/RSV, by geography",
             "count": len(NSSP_SIGNALS),
             "years": "2022–present",
         },
         {
             "name": "NIS",
-            "command": "pulse nis list / stream / rates / national",
+            "command": "pulse source nis list / stream / rates / national",
             "coverage": "Childhood & teen vaccination coverage survey",
             "count": 2,
             "years": "2011–2022",
@@ -1059,9 +1231,89 @@ def cmd_sources(json_out: Annotated[bool, typer.Option("--json")] = False):
     console.print()
     console.print(t)
     console.print(
-        f"\n[dim]{len(sources)} sources  |  "
+        f"\n[dim]{len(sources)} sources  |  [bold]pulse source <name>[/bold] for its datasets  |  "
         f'[bold]pulse search "<topic>"[/bold] to search across all of them[/dim]\n'
     )
+
+
+@source_app.callback(invoke_without_command=True)
+def source_callback(
+    ctx: typer.Context,
+    json_out: Annotated[bool, typer.Option("--json")] = False,
+):
+    """Bare `pulse source` prints the overview; a subcommand routes to that source."""
+    if ctx.invoked_subcommand is None:
+        _render_source_overview(json_out)
+
+
+@wonder_app.callback(invoke_without_command=True)
+def wonder_callback(
+    ctx: typer.Context,
+    json_out: Annotated[bool, typer.Option("--json")] = False,
+):
+    """Bare `pulse source wonder` lists WONDER's datasets; subcommands run queries."""
+    if ctx.invoked_subcommand is None:
+        _render_source_datasets("wonder", json_out)
+
+
+@seer_app.callback(invoke_without_command=True)
+def seer_callback(
+    ctx: typer.Context,
+    json_out: Annotated[bool, typer.Option("--json")] = False,
+):
+    """Bare `pulse source seer` lists SEER's datasets; subcommands run queries."""
+    if ctx.invoked_subcommand is None:
+        _render_source_datasets("seer", json_out)
+
+
+@cdc_open_app.callback(invoke_without_command=True)
+def cdc_open_callback(
+    ctx: typer.Context,
+    json_out: Annotated[bool, typer.Option("--json")] = False,
+):
+    """Bare `pulse source cdc-open` lists CDC Open Data datasets; subcommands run queries."""
+    if ctx.invoked_subcommand is None:
+        _render_source_datasets("cdc-open", json_out)
+
+
+@wisqars_app.callback(invoke_without_command=True)
+def wisqars_callback(
+    ctx: typer.Context,
+    json_out: Annotated[bool, typer.Option("--json")] = False,
+):
+    """Bare `pulse source wisqars` lists WISQARS datasets; subcommands run queries."""
+    if ctx.invoked_subcommand is None:
+        _render_source_datasets("wisqars", json_out)
+
+
+@grasp_app.callback(invoke_without_command=True)
+def grasp_callback(
+    ctx: typer.Context,
+    json_out: Annotated[bool, typer.Option("--json")] = False,
+):
+    """Bare `pulse source grasp` lists GRASP datasets; subcommands run queries."""
+    if ctx.invoked_subcommand is None:
+        _render_source_datasets("grasp", json_out)
+
+
+@nssp_app.callback(invoke_without_command=True)
+def nssp_callback(
+    ctx: typer.Context,
+    json_out: Annotated[bool, typer.Option("--json")] = False,
+):
+    """Bare `pulse source nssp` lists NSSP signals; subcommands run queries."""
+    if ctx.invoked_subcommand is None:
+        _render_source_datasets("nssp", json_out)
+
+
+@nis_app.callback(invoke_without_command=True)
+def nis_callback(
+    ctx: typer.Context,
+    json_out: Annotated[bool, typer.Option("--json")] = False,
+):
+    """Bare `pulse source nis` lists NIS public-use files; subcommands run queries."""
+    if ctx.invoked_subcommand is None:
+        _render_source_datasets("nis", json_out)
 
 
 # ── doctor ────────────────────────────────────────────────────────────────────
@@ -1073,9 +1325,11 @@ _DOCTOR_ENDPOINTS = [
     ("GRASP", "https://gis.cdc.gov/grasp/HantavirusCaseViewAPI/GetData_JSON?appVersion=Public"),
     ("GRASP / NSSP (Delphi)", "https://api.delphi.cmu.edu/epidata/covidcast_meta/"),
     # A specific year's file, not the bare directory listing — the directory
-    # itself returns 200 even though CDC has since moved individual NIS-Child
-    # files off this legacy path for years 2015+, which is the actual break.
-    ("NIS", "https://ftp.cdc.gov/pub/health_statistics/nchs/datasets/nis/NISPUF22-formats.sas"),
+    # itself returns 200 even for missing files. 2022 lives on the newer
+    # VACCINES_NIS mirror (see nis_catalog.py) with an .R format sidecar,
+    # not the legacy path's .sas — that split is what nis_catalog.py now
+    # routes on via NISYear.format_type.
+    ("NIS", "https://ftp.cdc.gov/pub/VACCINES_NIS/NISPUF22.R"),
 ]
 
 
@@ -1139,9 +1393,7 @@ def cmd_doctor():
     if not all_reachable:
         console.print(
             "\n[yellow]One or more sources are unreachable right now — could be a network issue, "
-            "a proxy requirement (see LLM_HTTP_PROXY), or the upstream API/URL has moved. "
-            "The NIS check in particular is known-broken as of this writing (CDC restructured "
-            "its file hosting) — see the pulse README.[/yellow]"
+            "a proxy requirement (see LLM_HTTP_PROXY), or the upstream API/URL has moved.[/yellow]"
         )
         raise typer.Exit(1)
 
@@ -1151,7 +1403,7 @@ def cmd_doctor():
 # ── list-queries ──────────────────────────────────────────────────────────────
 
 
-@app.command("list-queries")
+@wonder_app.command("list-queries")
 def cmd_list_queries(
     dataset_id: Annotated[Optional[str], typer.Option("--dataset", "-d")] = None,
     json_out: Annotated[bool, typer.Option("--json")] = False,
@@ -1202,16 +1454,16 @@ def cmd_list_queries(
     console.print()
     console.print(t)
     console.print(
-        f"\n[dim]{len(queries)} bundled queries  ·  Run: [bold]pulse run <filename>[/bold][/dim]\n"
+        f"\n[dim]{len(queries)} bundled queries  ·  Run: [bold]pulse source wonder run <filename>[/bold][/dim]\n"
     )
 
 
-# ── graduate ──────────────────────────────────────────────────────────────────
+# ── generate ──────────────────────────────────────────────────────────────────
 
-_GRADUATE_TEMPLATE = '''"""
+_GENERATE_TEMPLATE = '''"""
 {title}
 
-Generated by `pulse graduate` from {source_filename} (dataset {dataset_id}).
+Generated by `pulse generate` from {source_filename} (dataset {dataset_id}).
 This is a starting point, not a replica of health's hand-tuned fetch_*.py
 scripts: it writes one row per record using CDC WONDER's own column labels
 (via get_column_headers() + parse_response_to_arrays()), rather than the semantic column names,
@@ -1231,8 +1483,8 @@ Usage:
 '''
 
 
-@app.command("graduate")
-def cmd_graduate(
+@app.command("generate")
+def cmd_generate(
     query_file: Annotated[
         str, typer.Argument(help="Path to XML query file, or bundled query filename")
     ],
@@ -1270,7 +1522,7 @@ def cmd_graduate(
     ds = catalog.dataset(dataset_id)
     title = ds.title if ds else stem.replace("_", " ").title()
 
-    header = _GRADUATE_TEMPLATE.format(
+    header = _GENERATE_TEMPLATE.format(
         title=title,
         source_filename=path.name,
         dataset_id=dataset_id,
@@ -1495,7 +1747,7 @@ def cmd_cdc_open_list(
     console.print(t)
     console.print(
         f"\n[dim]{len(ds)} datasets  |  "
-        f'[bold]pulse cdc-open query <key-or-id>[/bold][/dim]\n'
+        f'[bold]pulse source cdc-open query <key-or-id>[/bold][/dim]\n'
     )
 
 

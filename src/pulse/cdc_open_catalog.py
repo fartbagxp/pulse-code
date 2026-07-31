@@ -3,7 +3,7 @@ snapshot at data/cdc_open_catalog.json.
 
 Each entry describes a Socrata dataset: its ID, human-readable name,
 description, date coverage, and key queryable columns. This is a reference
-catalog for discovery (`pulse cdc-open list`) — actual queries go straight to
+catalog for discovery (`pulse source cdc-open list`) — actual queries go straight to
 the live API via SodaClient, so the data itself is never stale even if a
 dataset's metadata here drifts.
 """

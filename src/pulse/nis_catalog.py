@@ -3,18 +3,35 @@ NIS dataset registry: URL patterns and vaccination column definitions.
 
 File hosting
 ------------
-The CDC publishes NIS public-use data files on their FTP mirror:
+CDC splits NIS public-use files across two FTP locations depending on year.
+The legacy mirror only ever hosted years through 2014:
   https://ftp.cdc.gov/pub/health_statistics/nchs/datasets/nis/
+2015+ (child) / 2016+ (teen) moved to a different directory entirely, not a
+renamed/updated version of the same files:
+  https://ftp.cdc.gov/pub/VACCINES_NIS/
+
+The two locations also ship different sidecar formats. Legacy years pair each
+.DAT with a SAS import program (NISPUF{YY}.SAS) giving absolute byte
+offsets via pointer notation. The new location pairs each .DAT with an R
+import script (NISPUF{YY}.R) instead — no .sas file exists there at all. The
+R script's LIST.NAMEWIDTH block gives sequential, gap-free "VARNAME", WIDTH
+pairs rather than offsets, but a running sum of widths reconstructs the same
+column positions; see parse_r_columns() in nis_parser.py.
+
+Child year 2015 has a .DAT at the new location but no format sidecar in
+either format (checked directly — neither .sas nor .R exists for it), so it
+is excluded from CHILD_YEARS below. NIS-Teen has no 2015 file at all (neither
+location) and is likewise absent from TEEN_YEARS.
 
 Index pages (browse available years and direct download links):
   Child: https://www.cdc.gov/nis/php/datasets-child/index.html
   Teen:  https://www.cdc.gov/nis/php/datasets-teen/index.html
 
-Each year ships three relevant files (YY = 2-digit year, e.g. 22 for 2022):
-  NIS-Child data:   NISPUF{YY}.DAT
-  NIS-Child SAS:    NISPUF{YY}-formats.sas
-  NIS-Teen data:    NISTEENPUF{YY}.DAT
-  NIS-Teen SAS:     NISTEENPUF{YY}-formats.sas
+Each year ships two relevant files (YY = 2-digit year, e.g. 22 for 2022):
+  NIS-Child data:    NISPUF{YY}.DAT
+  NIS-Child format:  NISPUF{YY}.SAS (<=2014) or NISPUF{YY}.R (>=2016)
+  NIS-Teen data:     NISTEENPUF{YY}.DAT
+  NIS-Teen format:   NISTEENPUF{YY}-formats.sas (<=2014) or NISTEENPUF{YY}.R (>=2016)
 
 Geographic scope of public-use files
 -------------------------------------
@@ -36,7 +53,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-_FTP = "https://ftp.cdc.gov/pub/health_statistics/nchs/datasets/nis"
+_LEGACY_FTP = "https://ftp.cdc.gov/pub/health_statistics/nchs/datasets/nis"
+_VACCINES_NIS_FTP = "https://ftp.cdc.gov/pub/VACCINES_NIS"
+
+# Last year hosted on the legacy mirror with a .sas sidecar. Every later year
+# lives at _VACCINES_NIS_FTP with an .R sidecar instead.
+_LEGACY_MAX_YEAR = 2014
 
 INDEX_URLS = {
     "child": "https://www.cdc.gov/nis/php/datasets-child/index.html",
@@ -48,31 +70,56 @@ INDEX_URLS = {
 class NISYear:
     year: int
     dat_url: str
-    sas_url: str
+    format_url: str
+    format_type: str  # "sas" or "r" — selects the parser in nis_parser.py
 
 
 def _child_year(yy: int) -> NISYear:
     tag = f"{yy:02d}"
+    year = 2000 + yy
+    if year <= _LEGACY_MAX_YEAR:
+        return NISYear(
+            year=year,
+            dat_url=f"{_LEGACY_FTP}/NISPUF{tag}.DAT",
+            format_url=f"{_LEGACY_FTP}/NISPUF{tag}.SAS",
+            format_type="sas",
+        )
     return NISYear(
-        year=2000 + yy,
-        dat_url=f"{_FTP}/NISPUF{tag}.DAT",
-        sas_url=f"{_FTP}/NISPUF{tag}-formats.sas",
+        year=year,
+        dat_url=f"{_VACCINES_NIS_FTP}/NISPUF{tag}.DAT",
+        format_url=f"{_VACCINES_NIS_FTP}/NISPUF{tag}.R",
+        format_type="r",
     )
 
 
 def _teen_year(yy: int) -> NISYear:
     tag = f"{yy:02d}"
+    year = 2000 + yy
+    if year <= _LEGACY_MAX_YEAR:
+        return NISYear(
+            year=year,
+            dat_url=f"{_LEGACY_FTP}/NISTEENPUF{tag}.DAT",
+            format_url=f"{_LEGACY_FTP}/NISTEENPUF{tag}.SAS",
+            format_type="sas",
+        )
     return NISYear(
-        year=2000 + yy,
-        dat_url=f"{_FTP}/NISTEENPUF{tag}.DAT",
-        sas_url=f"{_FTP}/NISTEENPUF{tag}-formats.sas",
+        year=year,
+        dat_url=f"{_VACCINES_NIS_FTP}/NISTEENPUF{tag}.DAT",
+        format_url=f"{_VACCINES_NIS_FTP}/NISTEENPUF{tag}.R",
+        format_type="r",
     )
 
 
-# Known available years for each survey (2011–2022 is the confirmed public range;
-# earlier years exist but use different file-naming schemes).
-CHILD_YEARS: dict[int, NISYear] = {2000 + yy: _child_year(yy) for yy in range(11, 23)}
-TEEN_YEARS: dict[int, NISYear] = {2000 + yy: _teen_year(yy) for yy in range(11, 23)}
+# Known available years for each survey. 2011-2014 on the legacy mirror,
+# 2016-2022 (child) / 2016-2024 (teen) on the new one — 2015 is skipped
+# entirely for both surveys (see module docstring: no format sidecar exists
+# for child 2015 at either location, and no NIS-Teen 2015 file exists at all).
+CHILD_YEARS: dict[int, NISYear] = {
+    2000 + yy: _child_year(yy) for yy in range(11, 23) if 2000 + yy != 2015
+}
+TEEN_YEARS: dict[int, NISYear] = {
+    2000 + yy: _teen_year(yy) for yy in list(range(11, 15)) + list(range(16, 25))
+}
 
 SURVEY_YEARS = {"child": CHILD_YEARS, "teen": TEEN_YEARS}
 
