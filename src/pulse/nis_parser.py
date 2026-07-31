@@ -2,7 +2,10 @@
 NIS fixed-width DAT file parser.
 
 Two steps to use:
-  1. parse_sas_columns(sas_text) → column map from the SAS import program
+  1. parse_sas_columns(sas_text) or parse_r_columns(r_text) → column map,
+     depending on which format the year's sidecar file uses (see
+     NISYear.format_type in nis_catalog.py — legacy years <=2014 ship a SAS
+     import program, 2016+ ships an R script instead).
   2. stream_dat(url, columns, select) → iterator of row dicts
 
 All parsing is streaming; the DAT file is never written to disk.
@@ -56,6 +59,44 @@ def parse_sas_columns(sas_text: str) -> dict[str, tuple[int, int]]:
             start = int(hit.group(2)) - 1
             end = int(hit.group(3))
             columns[name] = (start, end)
+
+    return columns
+
+
+def parse_r_columns(r_text: str) -> dict[str, tuple[int, int]]:
+    """
+    Parse a NIS R import script (2016+ years) and return column positions.
+
+    CDC's 2015+ file hosting (ftp.cdc.gov/pub/VACCINES_NIS/) ships an R
+    import script instead of a SAS program — no .sas sidecar exists there at
+    all. The script builds a flat LIST.NAMEWIDTH vector of alternating
+    "VARNAME", WIDTH pairs and calls read.fwf(widths=...) on it, e.g.:
+
+      LIST.NAMEWIDTH <-
+      c("SEQNUMC",6,
+      "SEQNUMHH",5,
+      ...
+      )
+
+    Unlike SAS pointer notation, these are widths, not absolute offsets —
+    but the list is sequential with no skipped bytes, so a running sum of
+    widths reconstructs the same (start, end) positions read.fwf() uses.
+
+    Returns {VARNAME: (start, end)}, 0-indexed / end-exclusive — same shape
+    as parse_sas_columns().
+    """
+    columns: dict[str, tuple[int, int]] = {}
+
+    m = re.search(r"LIST\.NAMEWIDTH\s*<-\s*c\((.*?)\)", r_text, re.DOTALL)
+    if not m:
+        return columns
+
+    pos = 0
+    for hit in re.finditer(r'"(\w+)"\s*,\s*(\d+)', m.group(1)):
+        name = hit.group(1).upper()
+        width = int(hit.group(2))
+        columns[name] = (pos, pos + width)
+        pos += width
 
     return columns
 

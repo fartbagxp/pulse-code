@@ -17,7 +17,7 @@ runner = CliRunner()
 
 
 def test_grasp_list_shows_known_dataset():
-    result = runner.invoke(app, ["grasp", "list"])
+    result = runner.invoke(app, ["source", "grasp", "list"])
     assert result.exit_code == 0
     assert "hantavirus" in result.stdout
 
@@ -32,7 +32,7 @@ def test_grasp_hantavirus_cases_calls_sdk(monkeypatch):
     monkeypatch.setattr(cli, "get_hantavirus_cases", fake_get_hantavirus_cases)
 
     result = runner.invoke(
-        app, ["grasp", "hantavirus", "cases", "--outcome", "Dead", "-f", "json"]
+        app, ["source", "grasp", "hantavirus", "cases", "--outcome", "Dead", "-f", "json"]
     )
     assert result.exit_code == 0
     assert captured["outcome"] == "Dead"
@@ -43,7 +43,7 @@ def test_grasp_hantavirus_by_year_calls_sdk(monkeypatch):
     monkeypatch.setattr(
         cli, "summarize_hantavirus_by_year", lambda: [{"year": "1993", "cases": 27}]
     )
-    result = runner.invoke(app, ["grasp", "hantavirus", "by-year", "-f", "json"])
+    result = runner.invoke(app, ["source", "grasp", "hantavirus", "by-year", "-f", "json"])
     assert result.exit_code == 0
     assert json.loads(result.stdout) == [{"year": "1993", "cases": 27}]
 
@@ -60,7 +60,7 @@ def test_grasp_fluview_ili_data_passes_region_and_epiweeks(monkeypatch):
     result = runner.invoke(
         app,
         [
-            "grasp", "fluview", "ili-data",
+            "source", "grasp", "fluview", "ili-data",
             "--region", "nat", "--region", "ca",
             "--epiweeks", "202001-202026",
             "-f", "json",
@@ -81,7 +81,7 @@ def test_grasp_flusurv_data_calls_sdk(monkeypatch):
     monkeypatch.setattr(cli, "get_flusurv_net", fake_get_flusurv_net)
 
     result = runner.invoke(
-        app, ["grasp", "flusurv", "data", "--location", "CA", "--season", "2019-20", "-f", "json"]
+        app, ["source", "grasp", "flusurv", "data", "--location", "CA", "--season", "2019-20", "-f", "json"]
     )
     assert result.exit_code == 0
     assert captured["locations"] == ["CA"]

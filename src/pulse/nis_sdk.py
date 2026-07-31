@@ -48,7 +48,7 @@ from pulse.nis_catalog import (
     SURVEY_VAX_COLS,
     SURVEY_YEARS,
 )
-from pulse.nis_parser import parse_sas_columns, stream_dat
+from pulse.nis_parser import parse_r_columns, parse_sas_columns, stream_dat
 
 # ── Internals ──────────────────────────────────────────────────────────────────
 
@@ -67,11 +67,12 @@ def _get_year(survey: str, year: int) -> NISYear:
     return entry
 
 
-def _fetch_columns(sas_url: str, select: set[str]) -> dict[str, tuple[int, int]]:
-    """Fetch the SAS codebook and return only the column positions we need."""
-    resp = requests.get(sas_url, timeout=60)
+def _fetch_columns(entry: NISYear, select: set[str]) -> dict[str, tuple[int, int]]:
+    """Fetch the format sidecar (SAS or R, per entry.format_type) and return only the column positions we need."""
+    resp = requests.get(entry.format_url, timeout=60)
     resp.raise_for_status()
-    all_cols = parse_sas_columns(resp.text)
+    parse = parse_sas_columns if entry.format_type == "sas" else parse_r_columns
+    all_cols = parse(resp.text)
     return {k: v for k, v in all_cols.items() if k in select}
 
 
@@ -129,11 +130,11 @@ def stream_records(
     """
     entry = _get_year(survey, year)
     select = columns if columns is not None else SURVEY_COLS[survey]
-    col_map = _fetch_columns(entry.sas_url, select)
+    col_map = _fetch_columns(entry, select)
 
     if not col_map:
         raise RuntimeError(
-            f"No matching columns found in SAS codebook at {entry.sas_url}. "
+            f"No matching columns found in {entry.format_type.upper()} codebook at {entry.format_url}. "
             "The file may use an unrecognised format — check the URL and try again."
         )
 

@@ -22,7 +22,7 @@ def test_nssp_query_calls_sdk_and_prints_json(monkeypatch):
     monkeypatch.setattr(cli, "get_ed_visits", fake_get_ed_visits)
 
     result = runner.invoke(
-        app, ["nssp", "query", "covid", "--geo-type", "state", "--geo-value", "ca", "-f", "json"]
+        app, ["source", "nssp", "query", "covid", "--geo-type", "state", "--geo-value", "ca", "-f", "json"]
     )
     assert result.exit_code == 0
     assert captured["pathogen"] == "covid"
@@ -37,7 +37,7 @@ def test_nssp_national_calls_sdk(monkeypatch):
 
     monkeypatch.setattr(cli, "get_national_trends", fake_get_national_trends)
 
-    result = runner.invoke(app, ["nssp", "national", "-f", "json"])
+    result = runner.invoke(app, ["source", "nssp", "national", "-f", "json"])
     assert result.exit_code == 0
     data = json.loads(result.stdout)
     assert data[0]["pathogen"] == "covid"
@@ -52,7 +52,7 @@ def test_nssp_hhs_calls_sdk_with_region(monkeypatch):
 
     monkeypatch.setattr(cli, "get_hhs_region_trends", fake_get_hhs_region_trends)
 
-    result = runner.invoke(app, ["nssp", "hhs", "influenza", "--region", "4", "-f", "json"])
+    result = runner.invoke(app, ["source", "nssp", "hhs", "influenza", "--region", "4", "-f", "json"])
     assert result.exit_code == 0
     assert captured["pathogen"] == "influenza"
     assert captured["region"] == 4

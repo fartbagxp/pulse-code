@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pulse-code"
-version = "1.0.2"
+version = "1.1.0"
 description = "CDC WONDER query CLI — explore, build, and refine public health data queries"
 readme = "README.md"
 license = "CC0-1.0"
