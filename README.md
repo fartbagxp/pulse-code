@@ -247,23 +247,8 @@ uv run pytest                  # unit tests only, fast, no network (default)
 uv run pytest -m integration   # + integration tests (see below)
 ```
 
-Unit tests cover catalog/matcher lookups, XML template merging (including
-the CDC WONDER radio-button-trap regression), AAR constraints, provider
-selection, and the offline-network-free CLI commands.
-
-Integration tests (`tests/integration/`) are excluded by default and split
-into two kinds:
-
-- **`test_socks_proxy_integration.py`**: always runs. Spins up a local
-  SOCKS5 relay and a local mock LLM HTTP server, so it actually exercises
-  `LLM_HTTP_PROXY` end-to-end (real SOCKS handshake, real HTTP
-  request/response) without needing real Azure/Anthropic credentials.
-- **`test_llm_provider_live.py`**: hits whatever `ANTHROPIC_API_KEY` /
-  `LLM_PROVIDER=azure_openai` + `AZURE_OPENAI_*` / `LLM_HTTP_PROXY` you
-  actually have configured. Skips if credentials aren't set; also skips
-  (rather than fails) if the provider is reachable but blocked at the
-  network layer (e.g. an Azure OpenAI resource with public access disabled
-  and no working proxy). That's an environment gap, not a code defect.
+See [docs/testing.md](docs/testing.md) for what's covered and how the
+integration tests are split.
 
 ## Bundled Datasets (with base templates)
 
@@ -304,25 +289,10 @@ into two kinds:
 
 ## Releasing
 
-Releases are cut by pushing a tag. `publish.yml` (single workflow, one run
-per tag) handles the rest as three sequential jobs:
-
-1. Bump `version` in `pyproject.toml`, commit it.
-2. `git tag vX.Y.Z && git push origin vX.Y.Z`
-3. **`build`** builds the sdist/wheel, failing fast if the tag doesn't match
-   `pyproject.toml`'s version.
-4. **`release`** (needs `build`) creates the GitHub Release with the built
-   artifacts attached, the source of truth for what shipped.
-5. **`publish`** (needs `release`) publishes those same artifacts to PyPI
-   (`pulse-code`) via trusted publishing (OIDC) against the `prod`
-   environment, with no API tokens stored in the repo.
-
-The `needs:` chain means a failure at any step blocks everything after it.
-For example, a PyPI hiccup can't leave a GitHub Release around for a package that
-isn't actually installable. If the `publish` job fails after `release`
-succeeds, use "Re-run failed jobs" on that workflow run rather than
-re-tagging. PyPI publishing is immutable: once a version is published it
-can't be re-uploaded, so a bad release means bumping to a new version.
+Releases are cut by pushing a tag; `publish.yml` builds, creates the GitHub
+Release, then publishes to PyPI as three sequential jobs. See
+[docs/release.md](docs/release.md) for the full breakdown and failure-mode
+notes.
 
 ## Related projects
 
