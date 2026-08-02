@@ -23,7 +23,7 @@ Type `# pulse is a CLI for exploring CDC public health data — WONDER, SEER, PL
 Enter
 Sleep 1.5s
 
-Type "uv run pulse --help"
+Type "pulse --help"
 Enter
 Sleep 2.5s
 
@@ -31,7 +31,7 @@ Type `# Start with topics — mortality, cancer, vaccination, etc. — spanning 
 Enter
 Sleep 1s
 
-Type "uv run pulse topics"
+Type "pulse topics"
 Enter
 Sleep 2s
 
@@ -39,7 +39,7 @@ Type `# Each source lives under "source". Let's zoom into WONDER's most current 
 Enter
 Sleep 1s
 
-Type "uv run pulse source wonder info D176"
+Type "pulse source wonder info D176"
 Enter
 Sleep 2.5s
 
@@ -47,7 +47,7 @@ Type `# Not sure which dataset you need? Search by topic instead.`
 Enter
 Sleep 1s
 
-Type `uv run pulse search "opioid overdose deaths by state"`
+Type `pulse search "opioid overdose deaths by state"`
 Enter
 Sleep 2.5s
 
@@ -55,7 +55,7 @@ Type `# Every WONDER dataset comes with validated, ready-to-run example queries.
 Enter
 Sleep 1s
 
-Type "uv run pulse source wonder list-queries --dataset D176"
+Type "pulse source wonder list-queries --dataset D176"
 Enter
 Sleep 3s
 

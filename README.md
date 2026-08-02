@@ -70,7 +70,7 @@ providers, and supports `http://`, `https://`, `socks5://`, and `socks5h://`
 export LLM_HTTP_PROXY=socks5h://user:pass@host:port
 ```
 
-## Commands
+## Usage
 
 The CLI has five top-level commands: **`topics`** (browse by subject across all
 sources), **`source`** (browse/query one source), **`search`** (free-text find),
@@ -130,7 +130,7 @@ pulse source seer by-age --site 1 -f csv
 pulse source seer compare-sites 55 47 66 -f csv       # breast vs. lung vs. melanoma
 ```
 
-Cancer incidence and U.S. mortality rates/counts by site, sex, race, and age group, back to 1975 — calls the same unauthenticated JSON endpoints [SEER*Explorer](https://seer.cancer.gov/statistics-network/explorer/) itself uses. No API key needed.
+Cancer incidence and U.S. mortality rates/counts by site, sex, race, and age group, back to 1975 — calls the same unauthenticated JSON endpoints [SEER\*Explorer](https://seer.cancer.gov/statistics-network/explorer/) itself uses. No API key needed.
 
 ### `pulse source cdc-open` — CDC Open Data (data.cdc.gov)
 
@@ -296,12 +296,12 @@ notes.
 
 ## Related projects
 
-`pulse` is the exploration layer of a three-repo pipeline:
+`pulse` is the exploration layer of various projects:
 
 ```bash
 pulse-code  →  health  →  health-charts
 (explore)      (archive)   (visualize)
 ```
 
-- **[fartbagxp/health](https://github.com/fartbagxp/health)**, a collection of CDC data pipelines (WONDER, data.cdc.gov, NCHS, SEER, WISQARS, GRASP, NSSP, NIS, and more) and the CDC WONDER XML API client and LLM query builder this tool builds on. `pulse`'s SEER, CDC Open Data, WISQARS, GRASP, NSSP, and NIS clients are lightweight, standalone reimplementations of `health`'s equivalent modules — kept dependency-free (just `requests`) rather than depending on `health` directly, which also pulls in `pandas`/`playwright`/`lxml` for its archival pipelines. `pulse` now covers every source `health` does. Where `pulse` is for one-off, ad hoc exploration, `health` is where a query graduates once someone wants it archived on a recurring schedule: 23 of the 36 saved WONDER queries in `src/pulse/queries/` are also saved in `health`'s `src/wonder/queries/`, each wrapped there in a small `fetch_*.py` script that runs on a schedule and commits the result as a CSV under `data/raw/wonder/`. The other 13 (cancer incidence/mortality by site, fetal deaths, PM2.5, TB, STI cases, heat-wave days, etc.) are exploration-only for now, candidates for `health` if any of them turn into a recurring need.
+- **[fartbagxp/health](https://github.com/fartbagxp/health)** collects various sets of CDC data pipelines (WONDER, data.cdc.gov, NCHS, SEER, WISQARS, GRASP, NSSP, NIS, and more) and the CDC WONDER XML API client and LLM query builder this tool builds on. `pulse`'s SEER, CDC Open Data, WISQARS, GRASP, NSSP, and NIS clients are lightweight, standalone reimplementations of `health`'s equivalent modules — kept dependency-free (just `requests`) rather than depending on `health` directly, which also pulls in `pandas`/`playwright`/`lxml` for its archival pipelines. `pulse` now covers every source `health` does. Where `pulse` is for one-off, ad hoc exploration, `health` is where a query graduates once someone wants it archived on a recurring schedule: 23 of the 36 saved WONDER queries in `src/pulse/queries/` are also saved in `health`'s `src/wonder/queries/`, each wrapped there in a small `fetch_*.py` script that runs on a schedule and commits the result as a CSV under `data/raw/wonder/`. The other 13 (cancer incidence/mortality by site, fetal deaths, PM2.5, TB, STI cases, heat-wave days, etc.) are exploration-only for now, candidates for `health` if any of them turn into a recurring need.
 - **[fartbagxp/health-charts](https://github.com/fartbagxp/health-charts)**, the dashboard at the end of the pipeline. It reads the CSVs `health` archives (including the ones seeded by `pulse`'s queries above) directly from GitHub and renders them as an interactive chart site.
