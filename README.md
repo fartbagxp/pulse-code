@@ -144,19 +144,12 @@ Two things to know. 2015 is missing from both surveys: `list child` reports 2011
 
 `rates` and `national` return one column per vaccine, 30 or more in total, which is more than `-f table` can fit on a terminal. The renderer squeezes every column to zero width and prints a grid of empty cells, which looks like the query returned nothing. The data is there: narrow it with `--vaccines`, as above, or use `-f csv` or `-f json` to get every column.
 
-## Testing
-
-```bash
-uv run pytest                  # unit tests only, fast, no network (default)
-uv run pytest -m integration   # + integration tests
-```
-
 ## Docs
 
 - [cdc-wonder.md](docs/cdc-wonder.md), the full `wonder` command reference and bundled dataset table
 - [building-xml-queries.md](docs/building-xml-queries.md), how to write WONDER XML for a dataset with no template
 - [llm-providers.md](docs/llm-providers.md), Anthropic, Azure OpenAI, and proxy configuration
-- [testing.md](docs/testing.md), what's covered and how the integration tests are split
+- [test.md](docs/test.md), running the tests and previewing the generated site
 - [release.md](docs/release.md), how a release is cut and what to do when one half-fails
 
 ## Related Projects

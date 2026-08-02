@@ -518,13 +518,15 @@ def render_index(catalog: dict, by_dataset: dict[str, list[dict]]) -> str:
 
     source_cards = []
     for s in SOURCES:
+        # Every card emits the same six children, empty last slot included, so
+        # the subgrid rows line up across cards however the text wraps.
         if s.slug == "wonder":
             extra = (
                 f'<a class="source-more" href="wonder.html">'
                 f"{total_queries} annotated example queries &amp; XML reference →</a>"
             )
         else:
-            extra = ""
+            extra = '<span class="source-more"></span>'
         source_cards.append(
             f"""<div class="source-card">
       <span class="card-tag" style="color:{s.color}">{html.escape(s.name)}</span>
@@ -534,8 +536,8 @@ def render_index(catalog: dict, by_dataset: dict[str, list[dict]]) -> str:
         &middot; <span class="mono">{html.escape(s.years)}</span>
       </p>
       <div class="cmd-wrap">
-        <div class="code-pill source-cmd" data-copy>{html.escape(s.example)}</div>
-        <div class="cmd-actions">{llm_badge(s.example)}<button class="copy-btn" type="button">Copy</button></div>
+        {copyable(s.example, "code-pill source-cmd")}
+        <div class="cmd-actions">{llm_badge(s.example)}</div>
       </div>
       <p class="source-verbs"><code>pulse source {html.escape(s.slug)}</code> {html.escape(s.commands)}</p>
       {extra}
@@ -717,12 +719,40 @@ def llm_badge(text: str) -> str:
     return '<span class="llm-badge llm-no">No key needed</span>'
 
 
+# Inline SVG rather than an icon font: one glyph isn't worth a webfont plus a
+# stylesheet from a third-party CDN on every page, and the pages stay
+# self-contained so a local preview works with no network at all. Drawn here,
+# so there's no icon-license attribution to carry either.
+_ICON_COPY = (
+    '<svg class="i-copy" viewBox="0 0 16 16" aria-hidden="true" focusable="false">'
+    '<rect x="1.75" y="1.75" width="8" height="8" rx="1.5"/>'
+    '<rect x="6.25" y="6.25" width="8" height="8" rx="1.5"/></svg>'
+)
+_ICON_DONE = (
+    '<svg class="i-done" viewBox="0 0 16 16" aria-hidden="true" focusable="false">'
+    '<path d="M2.6 8.7 6 12.1 13.4 4.6"/></svg>'
+)
+
+
+def copyable(text: str, pill_class: str = "code-pill cmd-pill") -> str:
+    """A command block with the copy button sitting on the block itself.
+    One-liners get the button vertically centered on the line; multi-line
+    blocks get it in the top corner, out of the way of the first command."""
+    single = "\n" not in text
+    line_class = "cmd-line cmd-line--inline" if single else "cmd-line"
+    return f"""<div class="{line_class}">
+    <div class="{pill_class}" data-copy>{html.escape(text)}</div>
+    <button class="copy-btn" type="button" title="Copy command" aria-label="Copy command">{_ICON_COPY}{_ICON_DONE}</button>
+  </div>"""
+
+
 def cmd(text: str, badge: bool = True) -> str:
     """A shell command block with a copy button and, for pulse commands, a
     badge saying whether it needs an LLM provider key."""
+    tag = llm_badge(text) if badge else ""
+    actions = f'\n  <div class="cmd-actions">{tag}</div>' if tag else ""
     return f"""<div class="cmd-wrap">
-  <div class="code-pill cmd-pill" data-copy>{html.escape(text)}</div>
-  <div class="cmd-actions">{llm_badge(text) if badge else ""}<button class="copy-btn" type="button">Copy</button></div>
+  {copyable(text)}{actions}
 </div>"""
 
 
@@ -938,17 +968,31 @@ footer {
   color: #86efac; font-size: .8rem; line-height: 1.9; margin: 1rem 0 0;
   max-width: 720px; overflow-x: auto;
 }
-.cmd-wrap { max-width: 720px; }
+.cmd-wrap { max-width: 720px; margin-top: 1rem; min-width: 0; }
 .cmd-actions { display: flex; align-items: center; gap: .6rem; margin-top: .5rem; }
+.cmd-line { position: relative; min-width: 0; }
+/* The pills use white-space: pre, so their min-content width is the whole
+   command. Without min-width: 0 the grid/flex automatic minimum size would
+   refuse to shrink below that and the block would spill out of its column,
+   dragging the absolutely positioned button with it. Scrolling happens
+   inside the pill instead. */
+.cmd-line .cmd-pill, .cmd-line .source-cmd { margin: 0; padding-right: 2.7rem; min-width: 0; }
 .copy-btn {
-  margin-left: auto; padding: .3rem .7rem; cursor: pointer;
-  background: transparent; color: var(--t3);
+  position: absolute; top: .45rem; right: .45rem; z-index: 2;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.7rem; height: 1.7rem; padding: 0; cursor: pointer;
+  background: var(--bg2); color: var(--t3);
   border: 1px solid var(--rim); border-radius: 6px;
-  font-family: inherit; font-size: .7rem; font-weight: 700;
-  letter-spacing: .04em; transition: color .15s, border-color .15s;
+  transition: color .15s, border-color .15s;
 }
+/* One-liners: sit the button on the line rather than above it. */
+.cmd-line--inline .copy-btn { top: 50%; transform: translateY(-50%); }
 .copy-btn:hover { color: var(--t); border-color: var(--t4); }
 .copy-btn.copied { color: #4ade80; border-color: #4ade8055; }
+.copy-btn svg { width: .82rem; height: .82rem; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.copy-btn .i-copy rect + rect { fill: var(--bg2); }
+.copy-btn .i-done, .copy-btn.copied .i-copy { display: none; }
+.copy-btn.copied .i-done { display: block; }
 .llm-badge {
   display: inline-flex; align-items: center; gap: .35rem;
   border-radius: 999px; padding: .2rem .65rem;
@@ -1020,14 +1064,28 @@ td.subject { color: var(--t3); max-width: 420px; }
   display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
   gap: 1px; background: var(--rim); border: 1px solid var(--rim); border-radius: 10px; overflow: hidden;
 }
-.source-card { background: var(--bg); padding: 1.6rem; display: flex; flex-direction: column; gap: .6rem; }
+.source-card { background: var(--bg); padding: 1.6rem; display: flex; flex-direction: column; gap: .6rem; min-width: 0; }
+.source-card > * { min-width: 0; }
+.source-card .cmd-wrap { margin-top: 0; }
 .source-coverage { font-size: .95rem; font-weight: 700; letter-spacing: -.02em; line-height: 1.35; }
 .source-meta { color: var(--t4); font-size: .75rem; }
 .source-cmd { font-size: .72rem; line-height: 1.6; padding: .7rem .85rem; color: #86efac; overflow-x: auto; white-space: pre; }
 .source-verbs { color: var(--t3); font-size: .75rem; line-height: 1.6; }
 .source-verbs code { color: var(--t2); }
-.source-more { margin-top: auto; padding-top: .5rem; color: rgb(var(--theme)); font-size: .78rem; text-decoration: none; }
+.source-more { padding-top: .5rem; color: rgb(var(--theme)); font-size: .78rem; text-decoration: none; }
 .source-more:hover { text-decoration: underline; }
+
+/* Line every card's rows up with its neighbours', so a coverage line that
+   wraps to two lines doesn't shove that card's example command out of step
+   with the rest of the row. Falls back to the plain flex column above. */
+@supports (grid-template-rows: subgrid) {
+  .source-card {
+    display: grid;
+    grid-template-rows: subgrid;
+    grid-row: span 6;
+    row-gap: .6rem;
+  }
+}
 
 .query { display: flex; flex-direction: column; gap: 2px; }
 .param {
@@ -1073,12 +1131,13 @@ document.addEventListener("click", function (e) {
   if (!src) return;
   var text = src.textContent;
   var done = function () {
-    var was = btn.textContent;
-    btn.textContent = "Copied";
     btn.classList.add("copied");
+    btn.setAttribute("aria-label", "Copied");
+    btn.setAttribute("title", "Copied");
     setTimeout(function () {
-      btn.textContent = was;
       btn.classList.remove("copied");
+      btn.setAttribute("aria-label", "Copy command");
+      btn.setAttribute("title", "Copy command");
     }, 1400);
   };
   if (navigator.clipboard && window.isSecureContext) {
