@@ -1,4 +1,4 @@
-# LLM providers
+# LLM Providers
 
 The `build`, `query`, `refine`, `compare`, and `chat` commands call an LLM.
 `pulse` defaults to Anthropic Claude and can also run against an Azure OpenAI

@@ -70,11 +70,11 @@ pulse source wonder query "fentanyl deaths by state 2020-2024" -f csv
 ```
 
 Mortality, natality, VAERS, and environmental datasets going back to 1968,
-with 23 bundled XML queries and LLM-backed commands that write new ones. CDC
+with 36 bundled XML queries and LLM-backed commands that write new ones. CDC
 requires a ~2 minute cooldown between queries. Full command reference and the
 dataset table: [docs/cdc-wonder.md](docs/cdc-wonder.md).
 
-### `pulse source seer`: NCI SEER cancer statistics
+### `pulse source seer`: NCI SEER Cancer Statistics
 
 ```bash
 pulse source seer sites --search breast              # look up a cancer site code
@@ -103,7 +103,7 @@ Raw [SODA](https://dev.socrata.com/) queries (`--where`, `--select`,
 `--group`, `--order`) against any registered Socrata dataset, by registry key
 or Socrata ID. Set `CDC_DATA_APP_TOKEN` for a higher rate limit.
 
-### `pulse source wisqars`: injury and violence data
+### `pulse source wisqars`: Injury and Violence Data
 
 ```bash
 pulse source wisqars list
@@ -119,7 +119,7 @@ Fatal firearm, suicide, homicide, and drug overdose data from
 [WISQARS](https://wisqars.cdc.gov/) at national, state, county, and census
 tract granularity, backed by the same Socrata client as `cdc-open`.
 
-### `pulse source grasp`: ATSDR GRASP disease surveillance
+### `pulse source grasp`: ATSDR GRASP Disease Surveillance
 
 ```bash
 pulse source grasp list
@@ -141,7 +141,7 @@ API. Repeatable options like `--region` and `--location` take one value per
 flag (`--region nat --region ca`), unlike `health`'s argparse CLI, which
 accepts a space separated list after a single flag.
 
-### `pulse source nssp`: emergency department visit surveillance
+### `pulse source nssp`: Emergency Department Visit Surveillance
 
 ```bash
 pulse source nssp query covid --geo-type state --geo-value ca -f csv
@@ -198,7 +198,7 @@ uv run pytest -m integration   # + integration tests
 - [release.md](docs/release.md), how a release is cut and what to do when one
   half-fails
 
-## Related projects
+## Related Projects
 
 `pulse` is the exploration layer of various projects:
 

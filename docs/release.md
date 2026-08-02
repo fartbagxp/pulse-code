@@ -17,7 +17,7 @@ which does the rest as three sequential jobs:
   `pulse-code` via trusted publishing (OIDC) against the `prod` environment,
   so no API tokens are stored in the repo.
 
-## When something fails
+## When Something Fails
 
 The `needs:` chain means a failure at any step blocks everything after it. A
 PyPI hiccup can't leave a GitHub Release sitting around for a package that

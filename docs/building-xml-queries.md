@@ -1,10 +1,10 @@
-# Building CDC WONDER XML queries from scratch
+# Building CDC WONDER XML Queries From Scratch
 
 This documents what we learned building queries for datasets that have no
 existing templates or examples: specifically D202 (Tuberculosis), D133 (Fetal
 Deaths), and D150 (Expanded Fetal Deaths).
 
-## The XML parameter structure
+## The XML Parameter Structure
 
 A CDC WONDER XML query is a flat list of `<parameter>` elements, each with
 `<name>` and `<value>`. They fall into these categories:
@@ -20,7 +20,7 @@ A CDC WONDER XML query is a flat list of `<parameter>` elements, each with
 | `finder-stage-*` | Declares that a variable uses codeset mode | `finder-stage-D133.V22 = codeset` |
 | Boilerplate | Required metadata fields | `dataset_code`, `stage`, `action-Send` |
 
-## How to read `query_params_D*.json`
+## How to Read `query_params_D*.json`
 
 Each `query_params_D*.json` file in `health/data/raw/wonder/` was scraped from
 the CDC WONDER request form. It contains two sections. `selects` holds every
@@ -29,7 +29,7 @@ finder-stage select, and one starting with `V_` means a regular filter
 dropdown. `inputs` holds the checkboxes, radio buttons, hidden fields, and
 submit buttons.
 
-### Finding required parameters
+### Finding Required Parameters
 
 1. Group-by variables come from `selects` where `name = "B_1"`. The `value`
    field of each `option` is what you put in the XML, for example `D202.V20`
@@ -52,7 +52,7 @@ submit buttons.
    - `O_V##_fmode = freg`, which tells WONDER to use regular filter mode
    - `finder-stage-D***.V## = codeset`, which declares codeset mode
 
-## The radio button trap
+## The Radio Button Trap
 
 This is the number one cause of HTTP 500 errors when building new queries.
 
@@ -93,7 +93,7 @@ Use the first `value` for each `name` group as the default. Common ones:
 | `O_birthplace` | Which delivery place grouping | First option |
 | `O_icd` | ICD code set (for cause-of-death datasets) | `D150.V107` (ICD-10) |
 
-## What M_* (measures) to include
+## What M_* (Measures) to Include
 
 Always check the `input_hidden` entries in the `inputs` list. The HTML form
 submits these automatically, so the XML has to mirror them:
@@ -107,7 +107,7 @@ They are mandatory. If the hidden field sends `M_2 = D202.M2`, your XML needs
 `<M_2>D202.M2</M_2>` even if you didn't explicitly choose that measure. You
 can add further measures by including the checkbox `M_*` values.
 
-## Minimum required boilerplate
+## Minimum Required Boilerplate
 
 Every query needs these at the end:
 
@@ -121,7 +121,7 @@ Every query needs these at the end:
 Some datasets also need `dataset_vintage_latest`. D202, for instance,
 requires `<value>TB</value>`. Check the `input_hidden` list.
 
-## Rate limiting
+## Rate Limiting
 
 CDC WONDER enforces a 15-second minimum gap between API requests. Running two
 queries back to back returns HTTP 429:
@@ -133,7 +133,7 @@ at least 15 seconds between consecutive requests.
 
 Wait at least 15 seconds between `pulse run` calls when testing.
 
-## Example: minimal TB query (D202)
+## Example: Minimal TB Query (D202)
 
 The simplest working query for "TB cases by year" needs:
 
@@ -146,7 +146,7 @@ The simplest working query for "TB cases by year" needs:
 
 D202 has no finder-stage variables, so it needs no `F_*` or `I_*` entries.
 
-## Example: fetal deaths by cause (D150)
+## Example: Fetal Deaths by Cause (D150)
 
 D150 is the most complex of the three: 91 group-by options, 9 radio button
 groups, 5 finder-stage variables. Beyond what D133 needs, it also wants:
@@ -159,7 +159,7 @@ When grouping by `D150.V107-level1` (ICD Chapter), the `O_icd = D150.V107`
 radio button is what tells WONDER to use the ICD-10 codeset for that
 dimension.
 
-## Workflow for a new dataset
+## Workflow for a New Dataset
 
 1. Find the `query_params_D***.json` file in `health/data/raw/wonder/`
 2. Extract group-by options: `selects` where `name = "B_1"`
