@@ -71,7 +71,7 @@ pulse source wonder query "fentanyl deaths by state 2020-2024" -f csv
 
 Mortality, natality, VAERS, and environmental datasets going back to 1968,
 with 36 bundled XML queries and LLM-backed commands that write new ones. CDC
-requires a ~2 minute cooldown between queries. Full command reference and the
+requires 15 seconds between queries. Full command reference and the
 dataset table: [docs/cdc-wonder.md](docs/cdc-wonder.md).
 
 ### `pulse source seer`: NCI SEER Cancer Statistics

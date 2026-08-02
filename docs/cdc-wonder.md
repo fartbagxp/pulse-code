@@ -61,8 +61,9 @@ pulse source wonder run births-by-year-2007-2024-req.xml -f table -o births.csv
 pulse source wonder run /path/to/my-query.xml
 ```
 
-Hits the live CDC WONDER API. No login required; CDC requires a ~2-minute
-cooldown between queries.
+Hits the live CDC WONDER API. No login required. CDC requires at least 15
+seconds between consecutive requests, and `pulse` waits that out for you when
+a command issues more than one.
 
 ## `pulse source wonder build "<description>"`: Build a Query With Claude
 
