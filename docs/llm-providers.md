@@ -30,4 +30,4 @@ If the LLM endpoint isn't directly reachable (for example an Azure OpenAI resour
 export LLM_HTTP_PROXY=socks5h://user:pass@host:port
 ```
 
-The SOCKS proxy path has an end-to-end integration test that runs without real credentials; see [testing.md](testing.md).
+The SOCKS proxy path has an end-to-end integration test that runs without real credentials; see [test.md](test.md).
