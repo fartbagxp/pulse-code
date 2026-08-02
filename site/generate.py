@@ -559,7 +559,7 @@ def render_index(catalog: dict, by_dataset: dict[str, list[dict]]) -> str:
 <span class="ck">pip install</span> pulse-code
 
 <span class="ck">pulse topics</span>                              <span class="cm"># browse by subject</span>
-<span class="ck">pulse search</span> <span class="cs">"opioid overdose deaths"</span>       <span class="cm"># find a dataset or query</span>
+<span class="ck">pulse search</span> <span class="cs">"opioid overdose deaths"</span>     <span class="cm"># find a dataset or query</span>
 <span class="ck">pulse source seer mortality</span> <span class="cs">--site 55</span>     <span class="cm"># query a source</span></div>
   <p class="hero-cta"><a href="usage.html">Read the full command guide →</a></p>
 </section>
@@ -776,7 +776,13 @@ def render_usage() -> str:
   <h2 class="ch-h">Install it.</h2>
   <p class="ch-p">Requires Python 3.11+. The LLM-backed commands (further down this page) also need a provider key; everything else works without one.</p>
 """
-        + cmd("pip install pulse-code\n\n# or, from a checkout:\nuv sync")
+        + cmd(
+            "# From PyPI (requires Python 3.11+)\n"
+            "pip install pulse-code\n"
+            "pulse --help\n\n"
+            "# From uv in this local directory\n"
+            "uv run pulse --help"
+        )
         + """
   <p class="ch-p" style="margin-top:1.5rem">Set an Anthropic key for the default provider, or point pulse at Azure OpenAI instead:</p>
 """

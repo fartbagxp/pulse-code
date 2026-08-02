@@ -23,7 +23,7 @@ class ResponseCell:
             return None
         try:
             return float(raw.replace(",", ""))
-        except ValueError, AttributeError:
+        except (ValueError, AttributeError):
             return None
 
 
