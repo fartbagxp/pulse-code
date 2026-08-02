@@ -1,9 +1,15 @@
 #!/usr/bin/env python3
-"""Generate the static site explaining CDC WONDER XML query structure.
+"""Generate the static site for the pulse CLI.
 
-Pure stdlib, no runtime dependency on the pulse package or anthropic.
-Reads real bundled queries + the dataset catalog so the site can't drift
-from what the CLI actually produces.
+Three kinds of page: a landing page introducing the CLI and its seven data
+sources, a usage guide for the commands, and a CDC WONDER XML reference
+(wonder.html plus one annotated page per bundled query).
+
+Pure stdlib, no runtime dependency on the pulse package or anthropic: the
+Pages workflow runs this on a bare Python with nothing installed. Anything
+that would need `import pulse` is transcribed into a constant here instead,
+with a note saying where it came from. Reads real bundled queries + the
+dataset catalog so the WONDER pages can't drift from what the CLI produces.
 
 Look and feel is modeled on https://fartbagxp.github.io/venture/: same
 CSS custom properties, font stack, and component patterns (nav, hero
@@ -55,6 +61,95 @@ O_HELP = {
     "O_aar_CI": "Whether to include confidence intervals on the Age-Adjusted Rate.",
     "O_change_action-Send-Export Results": "Internal flag tied to the 'Export Results' button's state.",
 }
+
+
+@dataclass(frozen=True)
+class Source:
+    name: str
+    slug: str
+    coverage: str
+    datasets: str
+    years: str
+    commands: str
+    example: str
+    color: str
+
+
+# Transcribed from `pulse source`, which is the authoritative overview. Kept
+# as a constant because sources_registry.py imports the whole pulse package
+# (and requests), which isn't available when the Pages workflow runs this.
+SOURCES: list[Source] = [
+    Source(
+        "CDC WONDER",
+        "wonder",
+        "Mortality, natality, environment, VAERS",
+        "38",
+        "1968–present",
+        "datasets / info / list-queries / run / build / query / refine / compare / chat",
+        "pulse source wonder query \"fentanyl deaths by state 2020-2024\" -f csv",
+        "#f87171",
+    ),
+    Source(
+        "NCI SEER",
+        "seer",
+        "Cancer incidence & mortality by site, sex, race, age",
+        "73",
+        "1975–present",
+        "sites / mortality / incidence / by-age / compare-sites",
+        "pulse source seer mortality --site 55 --sex female -f csv",
+        "#e879f9",
+    ),
+    Source(
+        "CDC Open Data",
+        "cdc-open",
+        "Mortality, vaccination, wastewater, NNDSS, HAI, and more",
+        "65",
+        "varies",
+        "list / query",
+        "pulse source cdc-open query leading_death --where \"year='2015'\" -f csv",
+        "#60a5fa",
+    ),
+    Source(
+        "WISQARS",
+        "wisqars",
+        "Injury, firearm, overdose, homicide, suicide deaths by geography",
+        "5",
+        "1999–present",
+        "mortality / national / state / county / tract / query",
+        "pulse source wisqars state --intent Drug_OD --year 2023 -f table",
+        "#fb923c",
+    ),
+    Source(
+        "ATSDR GRASP",
+        "grasp",
+        "Hantavirus, ILI activity, clinical flu labs, flu hospitalizations",
+        "4",
+        "1993–present",
+        "hantavirus / fluview / flusurv",
+        "pulse source grasp fluview ili-by-region --epiweeks 201940-202020 -f table",
+        "#facc15",
+    ),
+    Source(
+        "NSSP",
+        "nssp",
+        "ED visit % for COVID/flu/RSV, by geography",
+        "4",
+        "2022–present",
+        "query / national / hhs",
+        "pulse source nssp national --start 202401 -f csv",
+        "#22d3ee",
+    ),
+    Source(
+        "NIS",
+        "nis",
+        "Childhood & teen vaccination coverage survey",
+        "2",
+        "2011–2022",
+        "list / stream / rates / national",
+        "pulse source nis rates child 2022 -f table",
+        "#4ade80",
+    ),
+]
 
 
 @dataclass(frozen=True)
@@ -279,10 +374,9 @@ def render_nav(depth: int) -> str:
     return f"""<nav>
   <a class="logo" href="{root}index.html">pul<em>se</em></a>
   <ul>
+    <li><a href="{root}index.html#sources">Sources</a></li>
     <li><a href="{root}usage.html">Usage</a></li>
-    <li><a href="{root}index.html#legend">Structure</a></li>
-    <li><a href="{root}index.html#datasets">Datasets</a></li>
-    <li><a href="{root}index.html#examples">Examples</a></li>
+    <li><a href="{root}wonder.html">WONDER XML</a></li>
     <li><a href="https://github.com/fartbagxp/pulse-code" target="_blank">GitHub</a></li>
   </ul>
 </nav>"""
@@ -290,8 +384,8 @@ def render_nav(depth: int) -> str:
 
 def render_footer() -> str:
     return """<footer>
-  <span>MIT license</span>
-  <span>pulse — CDC WONDER query explorer</span>
+  <span>CC0-1.0 license</span>
+  <span>pulse, a CLI for CDC public health data</span>
 </footer>"""
 
 
@@ -410,10 +504,83 @@ def render_example(
 </section>
 {sibling_block}
 """
-    return page(f"{query['description']} — pulse", 1, body)
+    return page(f"{query['description']} | pulse", 1, body)
 
 
 def render_index(catalog: dict, by_dataset: dict[str, list[dict]]) -> str:
+    total_queries = sum(len(v) for v in by_dataset.values())
+
+    source_cards = []
+    for s in SOURCES:
+        if s.slug == "wonder":
+            extra = (
+                f'<a class="source-more" href="wonder.html">'
+                f"{total_queries} annotated example queries &amp; XML reference →</a>"
+            )
+        else:
+            extra = ""
+        source_cards.append(
+            f"""<div class="source-card">
+      <span class="card-tag" style="color:{s.color}">{html.escape(s.name)}</span>
+      <p class="source-coverage">{html.escape(s.coverage)}</p>
+      <p class="source-meta">
+        <span class="mono">{html.escape(s.datasets)}</span> datasets
+        &middot; <span class="mono">{html.escape(s.years)}</span>
+      </p>
+      <div class="code-pill source-cmd">{html.escape(s.example)}</div>
+      <p class="source-verbs"><code>pulse source {html.escape(s.slug)}</code> {html.escape(s.commands)}</p>
+      {extra}
+    </div>"""
+        )
+
+    body = f"""
+<section class="hero">
+  <p class="hero-kicker">Command Line Tool</p>
+  <h1>Query public health data<br>from your terminal.</h1>
+  <p class="hero-p">
+    pulse is a CLI that puts seven live CDC, NCI, and ATSDR data sources behind
+    one set of commands. Browse them by topic, run a bundled query, and get CSV,
+    JSON, or a table back. Querying any of the seven needs no API key and no
+    login. Only the commands that ask an LLM to write CDC WONDER XML need a
+    provider key.
+  </p>
+  <div class="code-pill hero-snippet"><span class="cm"># requires Python 3.14+</span>
+<span class="ck">pip install</span> pulse-code
+
+<span class="ck">pulse topics</span>                              <span class="cm"># browse by subject</span>
+<span class="ck">pulse search</span> <span class="cs">"opioid overdose deaths"</span>       <span class="cm"># find a dataset or query</span>
+<span class="ck">pulse source seer mortality</span> <span class="cs">--site 55</span>     <span class="cm"># query a source</span></div>
+  <p class="hero-cta"><a href="usage.html">Read the full command guide →</a></p>
+</section>
+
+<section class="chapter" id="sources">
+  <p class="ch-kicker">{len(SOURCES)} Sources</p>
+  <h2 class="ch-h">One CLI, seven sources.</h2>
+  <p class="ch-p">
+    You reach every source the same way: <code>pulse source</code> for the
+    overview, <code>pulse source &lt;name&gt;</code> for its datasets, and
+    <code>pulse source &lt;name&gt; &lt;verb&gt;</code> to query it. If you
+    don't know which source holds what you want, start with
+    <code>pulse topics</code> or <code>pulse search</code> and let it tell you.
+  </p>
+  <div class="source-grid">
+    {"".join(source_cards)}
+  </div>
+</section>
+
+<section class="chapter">
+  <p class="ch-kicker">Where to Go Next</p>
+  <h2 class="ch-h">Two guides.</h2>
+  <div class="ch-links">
+    <a href="usage.html">Command guide: every command, including the LLM-backed ones</a>
+    <a href="wonder.html">CDC WONDER XML reference: what every parameter in a request does</a>
+  </div>
+</section>
+"""
+    return page("pulse: a CLI for CDC public health data", 0, body)
+
+
+def render_wonder(catalog: dict, by_dataset: dict[str, list[dict]]) -> str:
     legend_items = "\n    ".join(
         f'<li><span class="swatch param-{c.key}"></span>'
         f"<strong>{html.escape(c.label)}</strong><span>{html.escape(c.description)}</span></li>"
@@ -477,14 +644,16 @@ def render_index(catalog: dict, by_dataset: dict[str, list[dict]]) -> str:
     A CDC WONDER API request is a flat list of <code>&lt;parameter&gt;</code>
     elements with cryptic names like <code>B_1</code> or <code>F_D202.V20</code>.
     This is a reference for reviewing or building those requests, color-coded
-    by category, with a plain-English explanation for every parameter in
-    every bundled query from the
-    <a href="https://github.com/fartbagxp/pulse-code" target="_blank">pulse</a> CLI.
+    by category, with a plain-English explanation for every parameter in every
+    bundled query. WONDER is one of the
+    <a href="index.html#sources">seven sources</a> pulse covers, and the only
+    one whose requests are written in XML, which is why it gets its own
+    reference.
   </p>
   <div class="code-pill hero-snippet"><span class="ck">B_1</span> = <span class="cs">D202.V20</span>   <span class="cm"># Group by Year</span>
 <span class="ck">O_age</span> = <span class="cs">D202.V1</span>  <span class="cm"># Required radio button</span>
 <span class="ck">M_1</span> = <span class="cs">D202.M1</span>  <span class="cm"># Measure: Cases</span></div>
-  <p class="hero-cta"><a href="usage.html">Not sure where to start? Read the CLI usage guide →</a></p>
+  <p class="hero-cta"><a href="usage.html">Read the CLI usage guide →</a></p>
 </section>
 
 <section class="chapter" id="legend">
@@ -499,7 +668,7 @@ def render_index(catalog: dict, by_dataset: dict[str, list[dict]]) -> str:
 <section class="chapter" id="datasets">
   <p class="ch-kicker">{len(catalog)} Datasets &middot; {total_queries} Bundled Queries</p>
   <h2 class="ch-h">Dataset overview.</h2>
-  <p class="ch-p">Same summary as <code>uv run pulse datasets</code>: every dataset pulse knows about, and whether there's an annotated example to look at.</p>
+  <p class="ch-p">Same summary as <code>pulse source wonder datasets</code>: every WONDER dataset pulse knows about, and whether there's an annotated example to look at.</p>
   <div class="table-wrap">
     <table>
       <thead>
@@ -516,7 +685,7 @@ def render_index(catalog: dict, by_dataset: dict[str, list[dict]]) -> str:
   {"".join(example_cards)}
 </div>
 """
-    return page("pulse — CDC WONDER XML query structure", 0, body)
+    return page("CDC WONDER XML query structure | pulse", 0, body)
 
 
 def cmd(text: str) -> str:
@@ -531,19 +700,20 @@ def render_usage() -> str:
   <p class="hero-kicker">Command Reference</p>
   <h1>Using the pulse CLI.</h1>
   <p class="hero-p">
-    pulse has two halves: a light half for finding and running datasets
-    you already know how to describe, and a heavier half that hands your
-    request to an LLM to write the CDC WONDER XML for you. Start with the
-    light half. It's faster, free, and works offline.
+    pulse has two halves: a light half for finding and running data you can
+    already describe, across all seven sources, and a heavier half that hands
+    your request to an LLM to write CDC WONDER XML for you. Start with the
+    light half. It never calls an LLM, so it's faster and needs no provider
+    key.
   </p>
 </section>
 
 <section class="chapter">
   <p class="ch-kicker">1 · Setup</p>
   <h2 class="ch-h">Install it.</h2>
-  <p class="ch-p">Requires Python 3.12+. The LLM-backed commands (further down this page) also need a provider key; everything else works without one.</p>
+  <p class="ch-p">Requires Python 3.14+. The LLM-backed commands (further down this page) also need a provider key; everything else works without one.</p>
 """
-        + cmd("uv sync")
+        + cmd("pip install pulse-code\n\n# or, from a checkout:\nuv sync")
         + """
   <p class="ch-p" style="margin-top:1.5rem">Set an Anthropic key for the default provider, or point pulse at Azure OpenAI instead:</p>
 """
@@ -560,19 +730,15 @@ def render_usage() -> str:
 </section>
 
 <section class="chapter">
-  <p class="ch-kicker">2 · Light usage: finding a dataset</p>
+  <p class="ch-kicker">2 · Light usage: finding your data</p>
   <h2 class="ch-h">Figure out what's available.</h2>
-  <p class="ch-p">No LLM needed for any of this: it's all local keyword matching over the bundled dataset catalog.</p>
+  <p class="ch-p">None of this calls an LLM. It's all local keyword matching over the bundled catalogs, across every source.</p>
 
-  <p class="ch-p"><strong style="color:var(--t)">See everything</strong>: every dataset pulse knows, grouped by topic:</p>
+  <p class="ch-p"><strong style="color:var(--t)">Start with a subject</strong> if you don't know which source holds what you want. Topics span all seven sources:</p>
 """
-        + cmd(
-            "pulse datasets\n"
-            "pulse datasets --topic Mortality   # filter by topic\n"
-            "pulse topics                       # just the topic list + counts"
-        )
+        + cmd("pulse topics\npulse topics mortality             # drill into one")
         + """
-  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">Search by plain description</strong>: matches datasets and bundled queries by keyword/synonym, no LLM call:</p>
+  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">Search by plain description.</strong> This matches datasets and bundled queries by keyword and synonym, without calling an LLM:</p>
 """
         + cmd(
             'pulse search "opioid overdose deaths by state"\n'
@@ -580,19 +746,32 @@ def render_usage() -> str:
             'pulse search "tick-borne disease cases" --queries      # bundled queries only'
         )
         + """
-  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">Drill into one dataset</strong>: measures, grouping dimensions, bundled examples:</p>
-"""
-        + cmd("pulse info D176")
-        + """
-  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">List the bundled example queries</strong>: 36 working queries, ready to run as-is:</p>
-"""
-        + cmd("pulse list-queries\npulse list-queries --dataset D176")
-        + """
-  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">Run one</strong>: hits the live CDC WONDER API (respects its 15s rate limit):</p>
+  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">Or go straight at a source.</strong> The nesting is identical whether you want cancer rates or flu hospitalizations:</p>
 """
         + cmd(
-            "pulse run drug-deaths-by-year-2018-2024-req.xml\n"
-            "pulse run opioid-overdose-deaths-2018-2024-req.xml -f csv -o out.csv"
+            "pulse source                       # what sources exist\n"
+            "pulse source seer                  # what that source offers\n"
+            "pulse source seer mortality --site 55 --sex female -f csv\n"
+            "pulse source nssp national --start 202401 -f csv\n"
+            'pulse source cdc-open query leading_death --where "year=\'2015\'" -f csv'
+        )
+        + """
+  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">Drill into one WONDER dataset.</strong> You get its measures, grouping dimensions, and bundled examples:</p>
+"""
+        + cmd("pulse source wonder datasets\npulse source wonder info D176")
+        + """
+  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">List the bundled example queries.</strong> All 36 work as-is:</p>
+"""
+        + cmd(
+            "pulse source wonder list-queries\n"
+            "pulse source wonder list-queries --dataset D176"
+        )
+        + """
+  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">Run one.</strong> This hits the live CDC WONDER API, which requires 15 seconds between consecutive requests. pulse waits that out for you:</p>
+"""
+        + cmd(
+            "pulse source wonder run drug-deaths-by-year-2018-2024-req.xml\n"
+            "pulse source wonder run opioid-overdose-deaths-2018-2024-req.xml -f csv -o out.csv"
         )
         + """
 </section>
@@ -602,28 +781,28 @@ def render_usage() -> str:
   <h2 class="ch-h">Ask for something that doesn't exist yet.</h2>
   <p class="ch-p">
     These commands call an LLM (Claude or Azure OpenAI, per your <code>LLM_PROVIDER</code>)
-    to turn a plain-English request into CDC WONDER XML. It grounds each request in
-    the closest matching bundled queries (the same examples shown on this site),
-    so the generated XML follows real, working parameter combinations instead of
-    guessing from scratch.
+    to turn a plain-English request into CDC WONDER XML. pulse grounds each request
+    in the closest matching bundled queries, the same examples shown on this site,
+    so the generated XML follows real parameter combinations instead of guessing
+    from scratch.
   </p>
 
-  <p class="ch-p"><strong style="color:var(--t)">Build XML without running it</strong>: inspect or save it first:</p>
+  <p class="ch-p"><strong style="color:var(--t)">Build XML without running it.</strong> Use this when you want to inspect or save it first:</p>
 """
         + cmd(
-            'pulse build "drug overdose deaths by state and year 2018-2023"\n'
-            'pulse build "maternal mortality by race, 2018-2023" -o maternal-race.xml'
+            'pulse source wonder build "drug overdose deaths by state and year 2018-2023"\n'
+            'pulse source wonder build "maternal mortality by race, 2018-2023" -o maternal-race.xml'
         )
         + """
   <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">Build and run in one step:</strong></p>
 """
-        + cmd('pulse query "fentanyl deaths by state 2020-2024" -f csv')
+        + cmd('pulse source wonder query "fentanyl deaths by state 2020-2024" -f csv')
         + """
-  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">Refine an existing query with feedback</strong>: starts from real XML (a bundled query or a file you built earlier) instead of a blank prompt:</p>
+  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">Refine an existing query with feedback.</strong> It starts from real XML, either a bundled query or a file you built earlier, rather than a blank prompt:</p>
 """
         + cmd(
-            'pulse refine opioid-overdose-deaths-2018-2024-req.xml "break it down by state"\n'
-            'pulse refine drug-deaths-by-year-2018-2024-req.xml "show monthly not yearly" --run -f csv'
+            'pulse source wonder refine opioid-overdose-deaths-2018-2024-req.xml "break it down by state"\n'
+            'pulse source wonder refine drug-deaths-by-year-2018-2024-req.xml "show monthly not yearly" --run -f csv'
         )
         + """
 </section>
@@ -632,18 +811,18 @@ def render_usage() -> str:
   <p class="ch-kicker">4 · The complicated cases</p>
   <h2 class="ch-h">Comparisons and multi-turn conversations.</h2>
 
-  <p class="ch-p"><strong style="color:var(--t)">Compare two or more causes/datasets side by side</strong>: the LLM decides this needs multiple sub-queries, builds each one, and runs them in sequence (respecting CDC's rate limit between calls):</p>
+  <p class="ch-p"><strong style="color:var(--t)">Compare two or more causes or datasets side by side.</strong> The LLM decides the request needs multiple sub-queries, builds each one, then runs them in sequence, waiting out CDC's rate limit between calls:</p>
 """
         + cmd(
-            'pulse compare "opioid overdose deaths vs suicide deaths by state 2018-2023"'
+            'pulse source wonder compare "opioid overdose deaths vs suicide deaths by state 2018-2023"'
         )
         + """
   <p class="ch-p" style="margin-top:1.5rem">If a request turns out not to be a comparison, <code>compare</code> falls back to running it as a single query and tells you so.</p>
 
-  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">Iterate conversationally</strong>: a REPL that keeps the current XML in memory across turns, so each follow-up refines what came before instead of starting over:</p>
+  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">Iterate conversationally.</strong> This is a REPL that keeps the current XML in memory across turns, so each follow-up refines what came before instead of starting over:</p>
 """
         + cmd(
-            'pulse chat "drug overdose deaths by year 2018-2024"\n\n'
+            'pulse source wonder chat "drug overdose deaths by year 2018-2024"\n\n'
             "pulse> break it down by state\n"
             "pulse> :xml        # show the current XML\n"
             "pulse> :run        # execute it against CDC WONDER\n"
@@ -651,11 +830,11 @@ def render_usage() -> str:
             "pulse> :exit"
         )
         + """
-  <p class="ch-p" style="margin-top:1.5rem">Anything not prefixed with <code>:</code> is treated as another round of natural-language feedback on the current query.</p>
+  <p class="ch-p" style="margin-top:1.5rem">pulse treats anything not prefixed with <code>:</code> as another round of natural-language feedback on the current query.</p>
 </section>
 """
     )
-    return page("Usage — pulse", 0, body)
+    return page("Usage | pulse", 0, body)
 
 
 CSS = """\
@@ -785,6 +964,19 @@ td.subject { color: var(--t3); max-width: 420px; }
 .card-arrow { margin-top: auto; padding-top: .75rem; font-size: .78rem; color: var(--t4); display: flex; align-items: center; gap: .6rem; }
 .example-card:hover .card-arrow { color: var(--t); }
 
+.source-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 1px; background: var(--rim); border: 1px solid var(--rim); border-radius: 10px; overflow: hidden;
+}
+.source-card { background: var(--bg); padding: 1.6rem; display: flex; flex-direction: column; gap: .6rem; }
+.source-coverage { font-size: .95rem; font-weight: 700; letter-spacing: -.02em; line-height: 1.35; }
+.source-meta { color: var(--t4); font-size: .75rem; }
+.source-cmd { font-size: .72rem; line-height: 1.6; padding: .7rem .85rem; color: #86efac; overflow-x: auto; white-space: pre; }
+.source-verbs { color: var(--t3); font-size: .75rem; line-height: 1.6; }
+.source-verbs code { color: var(--t2); }
+.source-more { margin-top: auto; padding-top: .5rem; color: rgb(var(--theme)); font-size: .78rem; text-decoration: none; }
+.source-more:hover { text-decoration: underline; }
+
 .query { display: flex; flex-direction: column; gap: 2px; }
 .param {
   position: relative; display: flex; gap: 1rem; padding: .35rem .6rem;
@@ -841,6 +1033,9 @@ def main() -> None:
 
     (_DIST_DIR / "usage.html").write_text(render_usage())
     print("wrote usage.html")
+
+    (_DIST_DIR / "wonder.html").write_text(render_wonder(catalog, by_dataset))
+    print("wrote wonder.html")
 
     for ds_id, ds_queries in by_dataset.items():
         for q in ds_queries:
