@@ -1,7 +1,7 @@
 # Pulse
 
 [![PyPI](https://img.shields.io/pypi/v/pulse-code?style=for-the-badge)](https://pypi.org/project/pulse-code/)
-[![Python versions](https://img.shields.io/badge/python-3.14%2B-blue?style=for-the-badge)](https://pypi.org/project/pulse-code/)
+[![Python versions](https://img.shields.io/badge/python-3.11%2B-blue?style=for-the-badge)](https://pypi.org/project/pulse-code/)
 [![Publish](https://img.shields.io/github/actions/workflow/status/fartbagxp/pulse-code/publish.yml?style=for-the-badge&label=publish)](https://github.com/fartbagxp/pulse-code/actions/workflows/publish.yml)
 [![Pages](https://img.shields.io/github/actions/workflow/status/fartbagxp/pulse-code/pages.yml?style=for-the-badge&label=pages)](https://fartbagxp.github.io/pulse-code/)
 [![License](https://img.shields.io/badge/license-CC0--1.0-blue?style=for-the-badge)](LICENSE)
@@ -133,14 +133,16 @@ Weekly percentage of ED visits attributed to COVID, flu, and RSV from the [Natio
 ```bash
 pulse source nis list child                                        # available years, 2011-2022
 pulse source nis stream child 2022 --limit 10 -f json              # raw respondent microdata
-pulse source nis rates child 2022 -f table                         # state-level UTD rates
+pulse source nis rates child 2022 --vaccines P_UTD431 -f table     # state-level UTD rates
 pulse source nis rates teen 2022 --vaccines P_UTDHPV13 -f csv
 pulse source nis national child 2022                               # national UTD summary
 ```
 
 Childhood (19-35mo) and teen (13-17yr) vaccination coverage from CDC's annual random-digit-dial survey. The source files are large fixed-width `.dat` files (50-200MB), and `pulse` streams them straight through without writing anything to disk.
 
-Known issue: CDC restructured its NIS file hosting after this registry's URLs were last verified, so live `stream`, `rates`, and `national` calls currently 404 for at least the 2015+ years. Some years now live under `www.cdc.gov/nis/media/files/...` or `ftp.cdc.gov/pub/Vaccines_NIS/` rather than the legacy path baked into `nis_catalog.py`. `health` has the same gap. The CLI plumbing and DAT-streaming parser are unit tested and correct; only the hardcoded per-year URLs need refreshing.
+Two things to know. 2015 is missing from both surveys: `list child` reports 2011-2022 and `list teen` reports 2011-2024, each skipping 2015.
+
+`rates` and `national` return one column per vaccine, 30 or more in total, which is more than `-f table` can fit on a terminal. The renderer squeezes every column to zero width and prints a grid of empty cells, which looks like the query returned nothing. The data is there: narrow it with `--vaccines`, as above, or use `-f csv` or `-f json` to get every column.
 
 ## Testing
 

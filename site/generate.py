@@ -146,7 +146,7 @@ SOURCES: list[Source] = [
         "2",
         "2011–2022",
         "list / stream / rates / national",
-        "pulse source nis rates child 2022 -f table",
+        "pulse source nis rates child 2022 --vaccines P_UTD431 -f table",
         "#4ade80",
     ),
 ]
@@ -405,6 +405,7 @@ def page(title: str, depth: int, body: str) -> str:
 {body}
 </div>
 {render_footer()}
+{COPY_SCRIPT}
 </body>
 </html>
 """
@@ -491,6 +492,11 @@ def render_example(
   <a class="download-btn" href="{stem}.xml" download>Download {stem}.xml</a>
 </section>
 
+<section class="chapter chapter--tight">
+  <p class="ch-kicker">Run this query</p>
+  {cmd(f"pulse source wonder run {filename}")}
+</section>
+
 <section class="chapter">
   <p class="ch-kicker">Hover any row to see what it does</p>
   <div class="query code-pill">
@@ -527,7 +533,10 @@ def render_index(catalog: dict, by_dataset: dict[str, list[dict]]) -> str:
         <span class="mono">{html.escape(s.datasets)}</span> datasets
         &middot; <span class="mono">{html.escape(s.years)}</span>
       </p>
-      <div class="code-pill source-cmd">{html.escape(s.example)}</div>
+      <div class="cmd-wrap">
+        <div class="code-pill source-cmd" data-copy>{html.escape(s.example)}</div>
+        <div class="cmd-actions">{llm_badge(s.example)}<button class="copy-btn" type="button">Copy</button></div>
+      </div>
       <p class="source-verbs"><code>pulse source {html.escape(s.slug)}</code> {html.escape(s.commands)}</p>
       {extra}
     </div>"""
@@ -544,7 +553,7 @@ def render_index(catalog: dict, by_dataset: dict[str, list[dict]]) -> str:
     login. Only the commands that ask an LLM to write CDC WONDER XML need a
     provider key.
   </p>
-  <div class="code-pill hero-snippet"><span class="cm"># requires Python 3.14+</span>
+  <div class="code-pill hero-snippet"><span class="cm"># requires Python 3.11+</span>
 <span class="ck">pip install</span> pulse-code
 
 <span class="ck">pulse topics</span>                              <span class="cm"># browse by subject</span>
@@ -688,9 +697,33 @@ def render_wonder(catalog: dict, by_dataset: dict[str, list[dict]]) -> str:
     return page("CDC WONDER XML query structure | pulse", 0, body)
 
 
-def cmd(text: str) -> str:
-    """A single shell command block, styled like the code-pill snippets."""
-    return f'<div class="code-pill cmd-pill">{html.escape(text)}</div>'
+# The only commands that call an LLM, all of them under `pulse source wonder`.
+# Mirrors cli.py's cmd_build / cmd_query / cmd_refine / cmd_compare / cmd_chat,
+# the five that construct a provider client. Everything else is a plain HTTP
+# fetch and needs no key.
+LLM_VERBS = ("build", "query", "refine", "compare", "chat")
+
+
+def needs_llm(text: str) -> bool:
+    return any(f"wonder {verb}" in text for verb in LLM_VERBS)
+
+
+def llm_badge(text: str) -> str:
+    """A 'needs a key' / 'no key' badge, derived from the command itself."""
+    if "pulse " not in text:
+        return ""
+    if needs_llm(text):
+        return '<span class="llm-badge llm-yes">Needs LLM key</span>'
+    return '<span class="llm-badge llm-no">No key needed</span>'
+
+
+def cmd(text: str, badge: bool = True) -> str:
+    """A shell command block with a copy button and, for pulse commands, a
+    badge saying whether it needs an LLM provider key."""
+    return f"""<div class="cmd-wrap">
+  <div class="code-pill cmd-pill" data-copy>{html.escape(text)}</div>
+  <div class="cmd-actions">{llm_badge(text) if badge else ""}<button class="copy-btn" type="button">Copy</button></div>
+</div>"""
 
 
 def render_usage() -> str:
@@ -711,7 +744,7 @@ def render_usage() -> str:
 <section class="chapter">
   <p class="ch-kicker">1 · Setup</p>
   <h2 class="ch-h">Install it.</h2>
-  <p class="ch-p">Requires Python 3.14+. The LLM-backed commands (further down this page) also need a provider key; everything else works without one.</p>
+  <p class="ch-p">Requires Python 3.11+. The LLM-backed commands (further down this page) also need a provider key; everything else works without one.</p>
 """
         + cmd("pip install pulse-code\n\n# or, from a checkout:\nuv sync")
         + """
@@ -821,15 +854,15 @@ def render_usage() -> str:
 
   <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">Iterate conversationally.</strong> This is a REPL that keeps the current XML in memory across turns, so each follow-up refines what came before instead of starting over:</p>
 """
-        + cmd(
-            'pulse source wonder chat "drug overdose deaths by year 2018-2024"\n\n'
-            "pulse> break it down by state\n"
-            "pulse> :xml        # show the current XML\n"
-            "pulse> :run        # execute it against CDC WONDER\n"
-            "pulse> :save drug-deaths-by-state.xml\n"
-            "pulse> :exit"
-        )
+        + cmd('pulse source wonder chat "drug overdose deaths by year 2018-2024"')
         + """
+  <p class="ch-p" style="margin-top:1.5rem">Inside the REPL:</p>
+  <div class="code-pill cmd-pill">pulse&gt; break it down by state
+pulse&gt; :xml        # show the current XML
+pulse&gt; :run        # execute it against CDC WONDER
+pulse&gt; :save drug-deaths-by-state.xml
+pulse&gt; :exit</div>
+
   <p class="ch-p" style="margin-top:1.5rem">pulse treats anything not prefixed with <code>:</code> as another round of natural-language feedback on the current query.</p>
 </section>
 """
@@ -905,6 +938,25 @@ footer {
   color: #86efac; font-size: .8rem; line-height: 1.9; margin: 1rem 0 0;
   max-width: 720px; overflow-x: auto;
 }
+.cmd-wrap { max-width: 720px; }
+.cmd-actions { display: flex; align-items: center; gap: .6rem; margin-top: .5rem; }
+.copy-btn {
+  margin-left: auto; padding: .3rem .7rem; cursor: pointer;
+  background: transparent; color: var(--t3);
+  border: 1px solid var(--rim); border-radius: 6px;
+  font-family: inherit; font-size: .7rem; font-weight: 700;
+  letter-spacing: .04em; transition: color .15s, border-color .15s;
+}
+.copy-btn:hover { color: var(--t); border-color: var(--t4); }
+.copy-btn.copied { color: #4ade80; border-color: #4ade8055; }
+.llm-badge {
+  display: inline-flex; align-items: center; gap: .35rem;
+  border-radius: 999px; padding: .2rem .65rem;
+  font-size: .65rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+}
+.llm-badge:before { content: ""; width: .4rem; height: .4rem; border-radius: 50%; background: currentColor; }
+.llm-yes { background: #c084fc22; color: #c084fc; }
+.llm-no { background: #4ade8022; color: #4ade80; }
 
 .code-pill {
   background: var(--bg2); border: 1px solid var(--rim); border-radius: 10px;
@@ -1008,6 +1060,42 @@ td.subject { color: var(--t3); max-width: 420px; }
   .param-name { min-width: 140px; }
 }
 """
+
+
+COPY_SCRIPT = """<script>
+document.addEventListener("click", function (e) {
+  var t = e.target;
+  if (!t || !t.closest) return;
+  var btn = t.closest(".copy-btn");
+  if (!btn) return;
+  var wrap = btn.closest(".cmd-wrap");
+  var src = wrap && wrap.querySelector("[data-copy]");
+  if (!src) return;
+  var text = src.textContent;
+  var done = function () {
+    var was = btn.textContent;
+    btn.textContent = "Copied";
+    btn.classList.add("copied");
+    setTimeout(function () {
+      btn.textContent = was;
+      btn.classList.remove("copied");
+    }, 1400);
+  };
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(done, function () {});
+    return;
+  }
+  var ta = document.createElement("textarea");
+  ta.value = text;
+  ta.setAttribute("readonly", "");
+  ta.style.position = "absolute";
+  ta.style.left = "-9999px";
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand("copy"); done(); } catch (err) {}
+  document.body.removeChild(ta);
+});
+</script>"""
 
 
 _CATEGORY_CSS = "\n".join(
