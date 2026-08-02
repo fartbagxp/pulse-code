@@ -1,12 +1,6 @@
 # CDC WONDER
 
-[CDC WONDER](https://wonder.cdc.gov/) (Wide-ranging ONline Data for
-Epidemiologic Research) is the federal government's main interface for public
-health statistics: drug overdose deaths, maternal mortality, birth rates,
-COVID deaths by race, suicide trends, vaccine adverse events, and much more.
-Its XML API is powerful but opaque. `pulse source wonder` wraps it with
-bundled, validated queries you can run directly, plus Claude-backed commands
-that write new XML queries from plain English.
+[CDC WONDER](https://wonder.cdc.gov/) (Wide-ranging ONline Data for Epidemiologic Research) is the federal government's main interface for public health statistics: drug overdose deaths, maternal mortality, birth rates, COVID deaths by race, suicide trends, vaccine adverse events, and much more. Its XML API is powerful but opaque. `pulse source wonder` wraps it with bundled, validated queries you can run directly, plus Claude-backed commands that write new XML queries from plain English.
 
 ## `pulse source wonder datasets`: What's Available
 
@@ -16,12 +10,9 @@ pulse source wonder datasets --topic Mortality  # filter by topic
 pulse source wonder datasets --json             # JSON output
 ```
 
-Shows all 26+ CDC WONDER datasets with topic, year range, what the data
-covers, the number of bundled example queries, and whether age-adjusted rates
-are available.
+Shows all 26+ CDC WONDER datasets with topic, year range, what the data covers, the number of bundled example queries, and whether age-adjusted rates are available.
 
-Topics: Mortality, Infant Mortality, Natality, Environment, Vaccine Safety,
-Infectious Disease.
+Topics: Mortality, Infant Mortality, Natality, Environment, Vaccine Safety, Infectious Disease.
 
 ## `pulse source wonder info <ID>`: Deep Dive on a Dataset
 
@@ -31,8 +22,7 @@ pulse source wonder info D66     # Natality / birth data
 pulse source wonder info D8      # VAERS vaccine adverse events
 ```
 
-Shows the subject description, available measures, the main grouping
-dimensions, and all bundled example queries for that dataset.
+Shows the subject description, available measures, the main grouping dimensions, and all bundled example queries for that dataset.
 
 ## `pulse source wonder list-queries`: All Bundled Example Queries
 
@@ -41,10 +31,7 @@ pulse source wonder list-queries
 pulse source wonder list-queries --dataset D176   # filter by dataset
 ```
 
-36 working XML queries across 21 datasets, covering drug/opioid/fentanyl
-deaths, maternal mortality, births, COVID deaths by race, suicide, tick-borne
-diseases, the racial mortality gap, infant mortality, heart disease vs.
-cancer, and more.
+36 working XML queries across 21 datasets, covering drug/opioid/fentanyl deaths, maternal mortality, births, COVID deaths by race, suicide, tick-borne diseases, the racial mortality gap, infant mortality, heart disease vs. cancer, and more.
 
 ## `pulse source wonder run <query>`: Execute a Query
 
@@ -61,9 +48,7 @@ pulse source wonder run births-by-year-2007-2024-req.xml -f table -o births.csv
 pulse source wonder run /path/to/my-query.xml
 ```
 
-Hits the live CDC WONDER API. No login required. CDC requires at least 15
-seconds between consecutive requests, and `pulse` waits that out for you when
-a command issues more than one.
+Hits the live CDC WONDER API. No login required. CDC requires at least 15 seconds between consecutive requests, and `pulse` waits that out for you when a command issues more than one.
 
 ## `pulse source wonder build "<description>"`: Build a Query With Claude
 
@@ -74,9 +59,7 @@ pulse source wonder build "maternal mortality by race, 2018-2023" -o maternal-ra
 pulse source wonder build "birth rates by age of mother 2010 to 2024" --no-suggest
 ```
 
-Suggests the closest existing queries first, then calls Claude to build a new
-XML query. The LLM selects the right dataset and generates overrides merged
-onto a validated base template.
+Suggests the closest existing queries first, then calls Claude to build a new XML query. The LLM selects the right dataset and generates overrides merged onto a validated base template.
 
 ## `pulse source wonder query "<description>"`: Build and Run in One Step
 
@@ -132,7 +115,4 @@ pulse source wonder refine drug-deaths-by-year-2018-2024-req.xml "show monthly n
 
 ## Writing XML Queries by Hand
 
-For datasets with no bundled template, see
-[building-xml-queries.md](building-xml-queries.md): the XML parameter
-structure, the radio-button trap behind most HTTP 500s, finder-stage
-variables, and rate limits.
+For datasets with no bundled template, see [building-xml-queries.md](building-xml-queries.md): the XML parameter structure, the radio-button trap behind most HTTP 500s, finder-stage variables, and rate limits.
