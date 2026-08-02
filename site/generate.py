@@ -385,7 +385,7 @@ def render_nav(depth: int) -> str:
 def render_footer() -> str:
     return """<footer>
   <span>CC0-1.0 license</span>
-  <span>pulse — a CLI for CDC public health data</span>
+  <span>pulse, a CLI for CDC public health data</span>
 </footer>"""
 
 
@@ -504,7 +504,7 @@ def render_example(
 </section>
 {sibling_block}
 """
-    return page(f"{query['description']} — pulse", 1, body)
+    return page(f"{query['description']} | pulse", 1, body)
 
 
 def render_index(catalog: dict, by_dataset: dict[str, list[dict]]) -> str:
@@ -557,7 +557,7 @@ def render_index(catalog: dict, by_dataset: dict[str, list[dict]]) -> str:
   <p class="ch-kicker">{len(SOURCES)} Sources</p>
   <h2 class="ch-h">One CLI, seven sources.</h2>
   <p class="ch-p">
-    Every source is reached the same way: <code>pulse source</code> for the
+    You reach every source the same way: <code>pulse source</code> for the
     overview, <code>pulse source &lt;name&gt;</code> for its datasets, and
     <code>pulse source &lt;name&gt; &lt;verb&gt;</code> to query it. If you
     don't know which source holds what you want, start with
@@ -572,12 +572,12 @@ def render_index(catalog: dict, by_dataset: dict[str, list[dict]]) -> str:
   <p class="ch-kicker">Where to Go Next</p>
   <h2 class="ch-h">Two guides.</h2>
   <div class="ch-links">
-    <a href="usage.html">Command guide: every command, from browsing to LLM-built queries</a>
+    <a href="usage.html">Command guide: every command, including the LLM-backed ones</a>
     <a href="wonder.html">CDC WONDER XML reference: what every parameter in a request does</a>
   </div>
 </section>
 """
-    return page("pulse — a CLI for CDC public health data", 0, body)
+    return page("pulse: a CLI for CDC public health data", 0, body)
 
 
 def render_wonder(catalog: dict, by_dataset: dict[str, list[dict]]) -> str:
@@ -653,7 +653,7 @@ def render_wonder(catalog: dict, by_dataset: dict[str, list[dict]]) -> str:
   <div class="code-pill hero-snippet"><span class="ck">B_1</span> = <span class="cs">D202.V20</span>   <span class="cm"># Group by Year</span>
 <span class="ck">O_age</span> = <span class="cs">D202.V1</span>  <span class="cm"># Required radio button</span>
 <span class="ck">M_1</span> = <span class="cs">D202.M1</span>  <span class="cm"># Measure: Cases</span></div>
-  <p class="hero-cta"><a href="usage.html">Not sure where to start? Read the CLI usage guide →</a></p>
+  <p class="hero-cta"><a href="usage.html">Read the CLI usage guide →</a></p>
 </section>
 
 <section class="chapter" id="legend">
@@ -685,7 +685,7 @@ def render_wonder(catalog: dict, by_dataset: dict[str, list[dict]]) -> str:
   {"".join(example_cards)}
 </div>
 """
-    return page("CDC WONDER XML query structure — pulse", 0, body)
+    return page("CDC WONDER XML query structure | pulse", 0, body)
 
 
 def cmd(text: str) -> str:
@@ -703,7 +703,8 @@ def render_usage() -> str:
     pulse has two halves: a light half for finding and running data you can
     already describe, across all seven sources, and a heavier half that hands
     your request to an LLM to write CDC WONDER XML for you. Start with the
-    light half. It's faster, free, and needs no key.
+    light half. It never calls an LLM, so it's faster and needs no provider
+    key.
   </p>
 </section>
 
@@ -731,13 +732,13 @@ def render_usage() -> str:
 <section class="chapter">
   <p class="ch-kicker">2 · Light usage: finding your data</p>
   <h2 class="ch-h">Figure out what's available.</h2>
-  <p class="ch-p">No LLM needed for any of this: it's all local keyword matching over the bundled catalogs, across every source.</p>
+  <p class="ch-p">None of this calls an LLM. It's all local keyword matching over the bundled catalogs, across every source.</p>
 
   <p class="ch-p"><strong style="color:var(--t)">Start with a subject</strong> if you don't know which source holds what you want. Topics span all seven sources:</p>
 """
         + cmd("pulse topics\npulse topics mortality             # drill into one")
         + """
-  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">Search by plain description</strong>: matches datasets and bundled queries by keyword/synonym, no LLM call:</p>
+  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">Search by plain description.</strong> This matches datasets and bundled queries by keyword and synonym, without calling an LLM:</p>
 """
         + cmd(
             'pulse search "opioid overdose deaths by state"\n'
@@ -745,7 +746,7 @@ def render_usage() -> str:
             'pulse search "tick-borne disease cases" --queries      # bundled queries only'
         )
         + """
-  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">Or go straight at a source.</strong> Every source nests the same way, so the shape is the same whether you want cancer rates or flu hospitalizations:</p>
+  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">Or go straight at a source.</strong> The nesting is identical whether you want cancer rates or flu hospitalizations:</p>
 """
         + cmd(
             "pulse source                       # what sources exist\n"
@@ -755,18 +756,18 @@ def render_usage() -> str:
             'pulse source cdc-open query leading_death --where "year=\'2015\'" -f csv'
         )
         + """
-  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">Drill into one WONDER dataset</strong>: measures, grouping dimensions, bundled examples:</p>
+  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">Drill into one WONDER dataset.</strong> You get its measures, grouping dimensions, and bundled examples:</p>
 """
         + cmd("pulse source wonder datasets\npulse source wonder info D176")
         + """
-  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">List the bundled example queries</strong>: 36 working queries, ready to run as-is:</p>
+  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">List the bundled example queries.</strong> All 36 work as-is:</p>
 """
         + cmd(
             "pulse source wonder list-queries\n"
             "pulse source wonder list-queries --dataset D176"
         )
         + """
-  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">Run one</strong>: hits the live CDC WONDER API, which requires 15 seconds between consecutive requests. pulse waits that out for you:</p>
+  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">Run one.</strong> This hits the live CDC WONDER API, which requires 15 seconds between consecutive requests. pulse waits that out for you:</p>
 """
         + cmd(
             "pulse source wonder run drug-deaths-by-year-2018-2024-req.xml\n"
@@ -780,13 +781,13 @@ def render_usage() -> str:
   <h2 class="ch-h">Ask for something that doesn't exist yet.</h2>
   <p class="ch-p">
     These commands call an LLM (Claude or Azure OpenAI, per your <code>LLM_PROVIDER</code>)
-    to turn a plain-English request into CDC WONDER XML. It grounds each request in
-    the closest matching bundled queries (the same examples shown on this site),
-    so the generated XML follows real, working parameter combinations instead of
-    guessing from scratch.
+    to turn a plain-English request into CDC WONDER XML. pulse grounds each request
+    in the closest matching bundled queries, the same examples shown on this site,
+    so the generated XML follows real parameter combinations instead of guessing
+    from scratch.
   </p>
 
-  <p class="ch-p"><strong style="color:var(--t)">Build XML without running it</strong>: inspect or save it first:</p>
+  <p class="ch-p"><strong style="color:var(--t)">Build XML without running it.</strong> Use this when you want to inspect or save it first:</p>
 """
         + cmd(
             'pulse source wonder build "drug overdose deaths by state and year 2018-2023"\n'
@@ -797,7 +798,7 @@ def render_usage() -> str:
 """
         + cmd('pulse source wonder query "fentanyl deaths by state 2020-2024" -f csv')
         + """
-  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">Refine an existing query with feedback</strong>: starts from real XML (a bundled query or a file you built earlier) instead of a blank prompt:</p>
+  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">Refine an existing query with feedback.</strong> It starts from real XML, either a bundled query or a file you built earlier, rather than a blank prompt:</p>
 """
         + cmd(
             'pulse source wonder refine opioid-overdose-deaths-2018-2024-req.xml "break it down by state"\n'
@@ -810,7 +811,7 @@ def render_usage() -> str:
   <p class="ch-kicker">4 · The complicated cases</p>
   <h2 class="ch-h">Comparisons and multi-turn conversations.</h2>
 
-  <p class="ch-p"><strong style="color:var(--t)">Compare two or more causes/datasets side by side</strong>: the LLM decides this needs multiple sub-queries, builds each one, and runs them in sequence (respecting CDC's rate limit between calls):</p>
+  <p class="ch-p"><strong style="color:var(--t)">Compare two or more causes or datasets side by side.</strong> The LLM decides the request needs multiple sub-queries, builds each one, then runs them in sequence, waiting out CDC's rate limit between calls:</p>
 """
         + cmd(
             'pulse source wonder compare "opioid overdose deaths vs suicide deaths by state 2018-2023"'
@@ -818,7 +819,7 @@ def render_usage() -> str:
         + """
   <p class="ch-p" style="margin-top:1.5rem">If a request turns out not to be a comparison, <code>compare</code> falls back to running it as a single query and tells you so.</p>
 
-  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">Iterate conversationally</strong>: a REPL that keeps the current XML in memory across turns, so each follow-up refines what came before instead of starting over:</p>
+  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">Iterate conversationally.</strong> This is a REPL that keeps the current XML in memory across turns, so each follow-up refines what came before instead of starting over:</p>
 """
         + cmd(
             'pulse source wonder chat "drug overdose deaths by year 2018-2024"\n\n'
@@ -829,11 +830,11 @@ def render_usage() -> str:
             "pulse> :exit"
         )
         + """
-  <p class="ch-p" style="margin-top:1.5rem">Anything not prefixed with <code>:</code> is treated as another round of natural-language feedback on the current query.</p>
+  <p class="ch-p" style="margin-top:1.5rem">pulse treats anything not prefixed with <code>:</code> as another round of natural-language feedback on the current query.</p>
 </section>
 """
     )
-    return page("Usage — pulse", 0, body)
+    return page("Usage | pulse", 0, body)
 
 
 CSS = """\
