@@ -1056,10 +1056,10 @@ td.subject { color: var(--t3); max-width: 420px; }
 .badge--complex { background: #f8717122; color: #f87171; }
 
 .example-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1px; background: var(--rim); border-top: 1px solid var(--rim);
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  border-top: 1px solid var(--rim);
 }
-.example-card { background: var(--bg); padding: 2.25rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: .85rem; transition: background .2s; }
+.example-card { background: var(--bg); padding: 2.25rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: .85rem; transition: background .2s; border-right: 1px solid var(--rim); border-bottom: 1px solid var(--rim); box-sizing: border-box; }
 .example-card:hover { background: var(--bg2); }
 .card-tag { font-size: .58rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; }
 .card-title { font-size: clamp(1.15rem, 2vw, 1.45rem); font-weight: 900; letter-spacing: -.03em; line-height: 1.15; }
@@ -1068,10 +1068,10 @@ td.subject { color: var(--t3); max-width: 420px; }
 .example-card:hover .card-arrow { color: var(--t); }
 
 .source-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: 1px; background: var(--rim); border: 1px solid var(--rim); border-radius: 10px; overflow: hidden;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  border: 1px solid var(--rim); border-radius: 10px; overflow: hidden;
 }
-.source-card { background: var(--bg); padding: 1.6rem; display: flex; flex-direction: column; gap: .6rem; min-width: 0; }
+.source-card { background: var(--bg); padding: 1.6rem; display: flex; flex-direction: column; gap: .6rem; min-width: 0; border-right: 1px solid var(--rim); border-bottom: 1px solid var(--rim); box-sizing: border-box; }
 .source-card > * { min-width: 0; }
 .source-card .cmd-wrap { margin-top: 0; }
 .source-coverage { font-size: .95rem; font-weight: 700; letter-spacing: -.02em; line-height: 1.35; }
