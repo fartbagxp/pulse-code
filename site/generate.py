@@ -397,6 +397,7 @@ def page(title: str, depth: int, body: str) -> str:
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{html.escape(title)}</title>
+<link rel="icon" type="image/png" href="{root}favicon.png">
 <link rel="stylesheet" href="{root}style.css">
 </head>
 <body>
@@ -1180,6 +1181,7 @@ def main() -> None:
     examples_dir = _DIST_DIR / "examples"
     examples_dir.mkdir(parents=True, exist_ok=True)
 
+    (_DIST_DIR / "favicon.png").write_bytes((_SITE_DIR / "favicon.png").read_bytes())
     (_DIST_DIR / "style.css").write_text(CSS + "\n" + _CATEGORY_CSS)
     (_DIST_DIR / "index.html").write_text(render_index(catalog, by_dataset))
     print("wrote index.html")
