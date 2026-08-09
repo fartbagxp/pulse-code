@@ -31,7 +31,7 @@ pulse source wonder list-queries
 pulse source wonder list-queries --dataset D176   # filter by dataset
 ```
 
-36 working XML queries across 21 datasets, covering drug/opioid/fentanyl deaths, maternal mortality, births, COVID deaths by race, suicide, tick-borne diseases, the racial mortality gap, infant mortality, heart disease vs. cancer, and more.
+58 working XML queries across 21 datasets, covering drug/opioid/fentanyl deaths by age and sex, maternal mortality by year and race, births by age of mother and race, COVID deaths by race/age/sex, suicide, tick-borne diseases by state/age/sex/race, the racial mortality gap, infant mortality, cancer incidence and mortality by state, STI cases by state, AIDS cases by location/age/sex/race, fetal deaths by race and age of mother, PM2.5 by state, heat wave days by county, heart disease vs. cancer, and more.
 
 ## `pulse source wonder run <query>`: Execute a Query
 

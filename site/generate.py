@@ -830,7 +830,7 @@ def render_usage() -> str:
 """
         + cmd("pulse source wonder datasets\npulse source wonder info D176")
         + """
-  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">List the bundled example queries.</strong> All 36 work as-is:</p>
+  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">List the bundled example queries.</strong> All 58 work as-is:</p>
 """
         + cmd(
             "pulse source wonder list-queries\n"

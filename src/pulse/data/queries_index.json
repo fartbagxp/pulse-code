@@ -28,12 +28,57 @@
       "year_range": "2007-2024"
     },
     {
+      "filename": "births-by-age-of-mother-2007-2024-req.xml",
+      "dataset_id": "D66",
+      "description": "Annual live birth counts by year and age of mother, 2007-2024",
+      "topic": "Natality",
+      "tags": ["birth", "natality", "fertility", "age", "age of mother", "annual", "count", "recent"],
+      "groupings": ["Year", "Age of Mother"],
+      "year_range": "2007-2024"
+    },
+    {
+      "filename": "births-by-race-2007-2024-req.xml",
+      "dataset_id": "D66",
+      "description": "Annual live birth counts by year and mother's race, 2007-2024",
+      "topic": "Natality",
+      "tags": ["birth", "natality", "fertility", "race", "ethnicity", "disparity", "annual", "count", "recent"],
+      "groupings": ["Year", "Mother's Race"],
+      "year_range": "2007-2024"
+    },
+    {
       "filename": "covid-deaths-by-race-2020-2023-req.xml",
       "dataset_id": "D176",
       "description": "COVID-19 deaths broken down by race and ethnicity, 2020-2023",
       "topic": "Mortality",
       "tags": ["COVID", "COVID-19", "pandemic", "race", "ethnicity", "disparity", "deaths"],
       "groupings": ["Year", "Race/Ethnicity"],
+      "year_range": "2020-2023"
+    },
+    {
+      "filename": "covid-deaths-by-age-2020-2023-req.xml",
+      "dataset_id": "D176",
+      "description": "COVID-19 deaths broken down by age group, 2020-2023",
+      "topic": "Mortality",
+      "tags": ["COVID", "COVID-19", "pandemic", "age", "age group", "deaths"],
+      "groupings": ["Year", "Age Group"],
+      "year_range": "2020-2023"
+    },
+    {
+      "filename": "covid-deaths-by-sex-2020-2023-req.xml",
+      "dataset_id": "D176",
+      "description": "COVID-19 deaths broken down by sex, 2020-2023",
+      "topic": "Mortality",
+      "tags": ["COVID", "COVID-19", "pandemic", "sex", "male", "female", "deaths"],
+      "groupings": ["Year", "Sex"],
+      "year_range": "2020-2023"
+    },
+    {
+      "filename": "covid-deaths-by-age-sex-2020-2023-req.xml",
+      "dataset_id": "D176",
+      "description": "COVID-19 deaths broken down by age group and sex, 2020-2023",
+      "topic": "Mortality",
+      "tags": ["COVID", "COVID-19", "pandemic", "age", "age group", "sex", "male", "female", "deaths"],
+      "groupings": ["Year", "Age Group", "Sex"],
       "year_range": "2020-2023"
     },
     {
@@ -127,6 +172,15 @@
       "year_range": "2018-2024"
     },
     {
+      "filename": "maternal-mortality-by-race-2018-2024-req.xml",
+      "dataset_id": "D158",
+      "description": "Maternal mortality (pregnancy-related deaths) by race, 2018-2024 — the Black-white maternal mortality gap",
+      "topic": "Mortality",
+      "tags": ["maternal", "maternal mortality", "pregnancy", "childbirth", "obstetric", "deaths", "race", "ethnicity", "disparity", "equity", "recent"],
+      "groupings": ["Year", "Single Race"],
+      "year_range": "2018-2024"
+    },
+    {
       "filename": "mortality-by-year-cause-1979-1998-req.xml",
       "dataset_id": "D16",
       "description": "All-cause mortality by year and ICD-9 cause of death, 1979-1998",
@@ -160,6 +214,24 @@
       "topic": "Mortality",
       "tags": ["opioid", "overdose", "deaths", "annual", "recent", "provisional", "heroin", "fentanyl", "prescription"],
       "groupings": ["Year"],
+      "year_range": "2018-2024"
+    },
+    {
+      "filename": "opioid-deaths-by-age-2018-2024-req.xml",
+      "dataset_id": "D176",
+      "description": "Opioid overdose deaths (all types) broken down by age group, 2018-2024",
+      "topic": "Mortality",
+      "tags": ["opioid", "overdose", "deaths", "age", "age group", "recent", "provisional", "heroin", "fentanyl", "prescription"],
+      "groupings": ["Year", "Age Group"],
+      "year_range": "2018-2024"
+    },
+    {
+      "filename": "opioid-deaths-by-sex-2018-2024-req.xml",
+      "dataset_id": "D176",
+      "description": "Opioid overdose deaths (all types) broken down by sex, 2018-2024",
+      "topic": "Mortality",
+      "tags": ["opioid", "overdose", "deaths", "sex", "male", "female", "recent", "provisional", "heroin", "fentanyl", "prescription"],
+      "groupings": ["Year", "Sex"],
       "year_range": "2018-2024"
     },
     {
@@ -199,6 +271,42 @@
       "year_range": "2016-2023"
     },
     {
+      "filename": "tick-borne-diseases-by-state-2016-2023-req.xml",
+      "dataset_id": "D130",
+      "description": "Tick-borne disease cases (Lyme, Rocky Mountain spotted fever, anaplasmosis, ehrlichiosis) broken down by state, 2016-2023",
+      "topic": "Infectious Disease",
+      "tags": ["tick", "Lyme disease", "Rocky Mountain spotted fever", "anaplasmosis", "ehrlichiosis", "tick-borne", "infectious", "cases", "NNDSS", "state", "location", "geography"],
+      "groupings": ["Disease", "State"],
+      "year_range": "2016-2023"
+    },
+    {
+      "filename": "tick-borne-diseases-by-age-2016-2023-req.xml",
+      "dataset_id": "D130",
+      "description": "Tick-borne disease cases (Lyme, Rocky Mountain spotted fever, anaplasmosis, ehrlichiosis) broken down by age group, 2016-2023",
+      "topic": "Infectious Disease",
+      "tags": ["tick", "Lyme disease", "Rocky Mountain spotted fever", "anaplasmosis", "ehrlichiosis", "tick-borne", "infectious", "cases", "NNDSS", "age", "age group"],
+      "groupings": ["Disease", "Age"],
+      "year_range": "2016-2023"
+    },
+    {
+      "filename": "tick-borne-diseases-by-sex-2016-2023-req.xml",
+      "dataset_id": "D130",
+      "description": "Tick-borne disease cases (Lyme, Rocky Mountain spotted fever, anaplasmosis, ehrlichiosis) broken down by sex, 2016-2023",
+      "topic": "Infectious Disease",
+      "tags": ["tick", "Lyme disease", "Rocky Mountain spotted fever", "anaplasmosis", "ehrlichiosis", "tick-borne", "infectious", "cases", "NNDSS", "sex", "male", "female"],
+      "groupings": ["Disease", "Sex"],
+      "year_range": "2016-2023"
+    },
+    {
+      "filename": "tick-borne-diseases-by-race-2016-2023-req.xml",
+      "dataset_id": "D130",
+      "description": "Tick-borne disease cases (Lyme, Rocky Mountain spotted fever, anaplasmosis, ehrlichiosis) broken down by race, 2016-2023",
+      "topic": "Infectious Disease",
+      "tags": ["tick", "Lyme disease", "Rocky Mountain spotted fever", "anaplasmosis", "ehrlichiosis", "tick-borne", "infectious", "cases", "NNDSS", "race", "ethnicity", "disparity"],
+      "groupings": ["Disease", "Race"],
+      "year_range": "2016-2023"
+    },
+    {
       "filename": "unintentional-injuries-by-age-2018-2023-req.xml",
       "dataset_id": "D176",
       "description": "Unintentional injury deaths by age group, 2018-2023 — includes falls, poisoning, motor vehicle crashes",
@@ -226,6 +334,24 @@
       "year_range": "2005-2024"
     },
     {
+      "filename": "fetal-deaths-by-race-2005-2024-req.xml",
+      "dataset_id": "D133",
+      "description": "Fetal death counts by year and mother's race, 2005-2024",
+      "topic": "Fetal Deaths",
+      "tags": ["fetal death", "stillbirth", "fetal", "stillborn", "race", "ethnicity", "disparity", "annual", "count"],
+      "groupings": ["Year", "Mother's Race"],
+      "year_range": "2005-2024"
+    },
+    {
+      "filename": "fetal-deaths-by-age-of-mother-2005-2024-req.xml",
+      "dataset_id": "D133",
+      "description": "Fetal death counts by year and age of mother, 2005-2024",
+      "topic": "Fetal Deaths",
+      "tags": ["fetal death", "stillbirth", "fetal", "stillborn", "age", "age of mother", "annual", "count"],
+      "groupings": ["Year", "Age of Mother"],
+      "year_range": "2005-2024"
+    },
+    {
       "filename": "fetal-deaths-by-cause-by-year-2014-2024-req.xml",
       "dataset_id": "D150",
       "description": "Fetal deaths by year and ICD chapter cause of death, 2014-2024",
@@ -244,12 +370,30 @@
       "year_range": "1999-2022"
     },
     {
+      "filename": "cancer-incidence-by-state-1999-2022-req.xml",
+      "dataset_id": "D205",
+      "description": "Cancer incidence (all sites combined) broken down by state, 1999-2022",
+      "topic": "Cancer",
+      "tags": ["cancer", "incidence", "tumor", "neoplasm", "state", "location", "geography", "annual"],
+      "groupings": ["Year", "State"],
+      "year_range": "1999-2022"
+    },
+    {
       "filename": "cancer-mortality-by-site-by-year-2018-2023-req.xml",
       "dataset_id": "D207",
       "description": "Cancer deaths by site (cancer type) and year, 2018-2023",
       "topic": "Cancer",
       "tags": ["cancer", "mortality", "deaths", "tumor", "neoplasm", "breast cancer", "lung cancer", "colorectal", "prostate", "annual", "rate"],
       "groupings": ["Cancer Site", "Year"],
+      "year_range": "2018-2023"
+    },
+    {
+      "filename": "cancer-mortality-by-state-2018-2023-req.xml",
+      "dataset_id": "D207",
+      "description": "Cancer deaths (all sites combined) broken down by state, 2018-2023",
+      "topic": "Cancer",
+      "tags": ["cancer", "mortality", "deaths", "state", "location", "geography", "annual"],
+      "groupings": ["Year", "State"],
       "year_range": "2018-2023"
     },
     {
@@ -262,12 +406,57 @@
       "year_range": "1984-2014"
     },
     {
+      "filename": "std-cases-by-state-1984-2014-req.xml",
+      "dataset_id": "D127",
+      "description": "STD morbidity by disease type and state, 1984-2014 — chlamydia, gonorrhea, syphilis, chancroid",
+      "topic": "STI / Sexual Health",
+      "tags": ["STD", "STI", "chlamydia", "gonorrhea", "syphilis", "sexually transmitted", "disease", "cases", "state", "location", "geography"],
+      "groupings": ["Disease", "State"],
+      "year_range": "1984-2014"
+    },
+    {
       "filename": "aids-cases-by-year-1981-1999-req.xml",
       "dataset_id": "D12",
       "description": "AIDS cases by year diagnosed, 1981-1999 — tracks the US AIDS epidemic",
       "topic": "HIV/AIDS",
       "tags": ["AIDS", "HIV", "epidemic", "cases", "year", "annual", "trend", "1980s", "1990s"],
       "groupings": ["Year Diagnosed"],
+      "year_range": "1981-1999"
+    },
+    {
+      "filename": "aids-cases-by-location-1981-1999-req.xml",
+      "dataset_id": "D12",
+      "description": "AIDS cases by year diagnosed and metro area/region of residence, 1981-1999",
+      "topic": "HIV/AIDS",
+      "tags": ["AIDS", "HIV", "epidemic", "cases", "location", "metro area", "region", "geography", "1980s", "1990s"],
+      "groupings": ["Year Diagnosed", "Location"],
+      "year_range": "1981-1999"
+    },
+    {
+      "filename": "aids-cases-by-age-1981-1999-req.xml",
+      "dataset_id": "D12",
+      "description": "AIDS cases by year diagnosed and age at diagnosis, 1981-1999",
+      "topic": "HIV/AIDS",
+      "tags": ["AIDS", "HIV", "epidemic", "cases", "age", "1980s", "1990s"],
+      "groupings": ["Year Diagnosed", "Age"],
+      "year_range": "1981-1999"
+    },
+    {
+      "filename": "aids-cases-by-sex-1981-1999-req.xml",
+      "dataset_id": "D12",
+      "description": "AIDS cases by year diagnosed and sex/sexual orientation, 1981-1999",
+      "topic": "HIV/AIDS",
+      "tags": ["AIDS", "HIV", "epidemic", "cases", "sex", "sexual orientation", "1980s", "1990s"],
+      "groupings": ["Year Diagnosed", "Sex and Sexual Orientation"],
+      "year_range": "1981-1999"
+    },
+    {
+      "filename": "aids-cases-by-race-1981-1999-req.xml",
+      "dataset_id": "D12",
+      "description": "AIDS cases by year diagnosed and race/ethnicity, 1981-1999",
+      "topic": "HIV/AIDS",
+      "tags": ["AIDS", "HIV", "epidemic", "cases", "race", "ethnicity", "disparity", "1980s", "1990s"],
+      "groupings": ["Year Diagnosed", "Race/Ethnicity"],
       "year_range": "1981-1999"
     },
     {
@@ -280,12 +469,21 @@
       "year_range": "2003-2011"
     },
     {
+      "filename": "pm25-by-state-2003-2011-req.xml",
+      "dataset_id": "D73",
+      "description": "Fine particulate matter (PM2.5) annual average by year and state, 2003-2011",
+      "topic": "Environment",
+      "tags": ["PM2.5", "air quality", "particulate matter", "pollution", "environment", "state", "location", "geography", "annual"],
+      "groupings": ["Year", "State"],
+      "year_range": "2003-2011"
+    },
+    {
       "filename": "heat-wave-days-by-county-req.xml",
       "dataset_id": "D104",
-      "description": "Average number of heat wave days by year (national), 1981-2010",
+      "description": "Average number of heat wave days by county, 1981-2010",
       "topic": "Environment",
-      "tags": ["heat wave", "heat", "temperature", "climate", "environment", "extreme heat", "annual"],
-      "groupings": ["Year"],
+      "tags": ["heat wave", "heat", "temperature", "climate", "environment", "extreme heat", "county", "location", "geography"],
+      "groupings": ["County"],
       "year_range": "1981-2010"
     },
     {
