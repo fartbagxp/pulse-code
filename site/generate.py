@@ -176,7 +176,7 @@ CATEGORIES: list[Category] = [
         "B",
         "Group-By",
         "#60a5fa",
-        "Which dimensions appear as rows (B_1 through B_5). Unused slots are *None*.",
+        "Which dimensions appear as rows (B_1 through B_5). Unused slots are *None* and can take any other dimension the dataset supports — hover one in an example to see the options.",
     ),
     Category(
         "F",
@@ -287,6 +287,14 @@ def explain_parameter(
 
     if cat.key == "B":
         if val == "*None*":
+            groupings = dataset.get("key_groupings", [])
+            if groupings:
+                return (
+                    "Unused group-by slot: the results aren't split out by "
+                    "anything extra here. To use it, this dataset can group by: "
+                    + "; ".join(groupings)
+                    + "."
+                )
             return (
                 "Unused group-by slot. This row won't be split out by anything extra."
             )
@@ -376,7 +384,6 @@ def render_nav(depth: int) -> str:
   <ul>
     <li><a href="{root}index.html#sources">Sources</a></li>
     <li><a href="{root}usage.html">Usage</a></li>
-    <li><a href="{root}wonder.html">WONDER XML</a></li>
     <li><a href="https://github.com/fartbagxp/pulse-code" target="_blank">GitHub</a></li>
   </ul>
 </nav>"""
@@ -491,6 +498,7 @@ def render_example(
     <span>{html.escape(dataset.get("year_range_label", ""))}</span>
   </p>
   <a class="download-btn" href="{stem}.xml" download>Download {stem}.xml</a>
+  <p class="hero-cta"><a href="../wonder.html">← Back to the WONDER XML reference</a></p>
 </section>
 
 <section class="chapter chapter--tight">
@@ -553,8 +561,8 @@ def render_index(catalog: dict, by_dataset: dict[str, list[dict]]) -> str:
     pulse is a CLI that puts seven live CDC, NCI, and ATSDR data sources behind
     one set of commands. Browse them by topic, run a bundled query, and get CSV,
     JSON, or a table back. Querying any of the seven needs no API key and no
-    login. Only the commands that ask an LLM to write CDC WONDER XML need a
-    provider key.
+    login. Only the commands that ask an LLM to write
+    <a href="wonder.html">CDC WONDER XML</a> need a provider key.
   </p>
   <div class="code-pill hero-snippet"><span class="cm"># requires Python 3.11+</span>
 <span class="ck">pip install</span> pulse-code
@@ -574,6 +582,8 @@ def render_index(catalog: dict, by_dataset: dict[str, list[dict]]) -> str:
     <code>pulse source &lt;name&gt; &lt;verb&gt;</code> to query it. If you
     don't know which source holds what you want, start with
     <code>pulse topics</code> or <code>pulse search</code> and let it tell you.
+    CDC WONDER is the one source whose requests are written in XML, so it also
+    gets its own <a href="wonder.html">annotated XML reference</a>.
   </p>
   <div class="source-grid">
     {"".join(source_cards)}
@@ -830,7 +840,7 @@ def render_usage() -> str:
 """
         + cmd("pulse source wonder datasets\npulse source wonder info D176")
         + """
-  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">List the bundled example queries.</strong> All 58 work as-is:</p>
+  <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">List the bundled example queries.</strong> All 58 work as-is, and every one has an annotated walkthrough in the <a href="wonder.html">WONDER XML reference</a>:</p>
 """
         + cmd(
             "pulse source wonder list-queries\n"
@@ -852,9 +862,9 @@ def render_usage() -> str:
   <p class="ch-p">
     These commands call an LLM (Claude or Azure OpenAI, per your <code>LLM_PROVIDER</code>)
     to turn a plain-English request into CDC WONDER XML. pulse grounds each request
-    in the closest matching bundled queries, the same examples shown on this site,
-    so the generated XML follows real parameter combinations instead of guessing
-    from scratch.
+    in the closest matching bundled queries, the same examples annotated in the
+    <a href="wonder.html">WONDER XML reference</a>, so the generated XML follows
+    real parameter combinations instead of guessing from scratch.
   </p>
 
   <p class="ch-p"><strong style="color:var(--t)">Build XML without running it.</strong> Use this when you want to inspect or save it first:</p>
@@ -1098,6 +1108,17 @@ td.subject { color: var(--t3); max-width: 420px; }
 .param {
   position: relative; display: flex; gap: 1rem; padding: .35rem .6rem;
   border-radius: 4px; border-left: 3px solid transparent; cursor: default;
+}
+/* Share one name column across all rows, so a name longer than the fallback
+   min-width (O_change_action-Send-Export Results) widens the column for
+   everyone instead of shoving its own value out of line. The tooltip is
+   position: absolute, so it never occupies a grid cell. */
+@supports (grid-template-columns: subgrid) {
+  .query { display: grid; grid-template-columns: max-content 1fr; }
+  .param { display: grid; grid-template-columns: subgrid; grid-column: span 2; }
+  @media (max-width: 700px) {
+    .query { grid-template-columns: minmax(140px, max-content) 1fr; }
+  }
 }
 .param:hover { background: #ffffff08; }
 .param-name { min-width: 220px; font-weight: 600; }
