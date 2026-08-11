@@ -79,8 +79,9 @@ def test_sources_json_output_is_valid():
     result = runner.invoke(app, ["source", "--json"])
     assert result.exit_code == 0
     data = json.loads(result.stdout)
-    assert len(data) == 7
+    assert len(data) == 8
     assert all("command" in s for s in data)
+    assert any(s["name"] == "DQS" for s in data)
 
 
 def test_topics_lists_categories():
@@ -95,7 +96,7 @@ def test_topics_mortality_is_first():
     result = runner.invoke(app, ["topics", "--json"])
     assert result.exit_code == 0
     data = json.loads(result.stdout)
-    assert len(data) == 18
+    assert len(data) == 29
     assert data[0]["label"] == "Mortality"
 
 
