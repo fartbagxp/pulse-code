@@ -22,6 +22,13 @@ from pulse.catalog import Catalog
 from pulse.cdc_open_catalog import dataset as cdc_open_dataset
 from pulse.cdc_open_catalog import datasets as cdc_open_datasets
 from pulse.cdc_open_catalog import search as cdc_open_search
+from pulse.dqs_catalog import dataset as dqs_dataset
+from pulse.dqs_catalog import datasets as dqs_datasets
+from pulse.dqs_catalog import search as dqs_search
+from pulse.dqs_catalog import topics as dqs_topic_list
+from pulse.dqs_sdk import estimate_types as dqs_estimate_types
+from pulse.dqs_sdk import query as dqs_query
+from pulse.dqs_sdk import trend as dqs_trend
 from pulse.grasp_catalog import DATASETS as GRASP_DATASETS
 from pulse.grasp_catalog import FLUSURV_LOCATIONS
 from pulse.grasp_sdk import (
@@ -158,6 +165,12 @@ cdc_open_app = typer.Typer(
     no_args_is_help=False,
     invoke_without_command=True,
 )
+dqs_app = typer.Typer(
+    help="NCHS Data Query System — Health, United States topics (NHANES/NHIS/NHAMCS/NVSS).",
+    add_completion=False,
+    no_args_is_help=False,
+    invoke_without_command=True,
+)
 wisqars_app = typer.Typer(
     help="WISQARS injury mortality and violence data.",
     add_completion=False,
@@ -201,6 +214,7 @@ app.add_typer(source_app, name="source")
 source_app.add_typer(wonder_app, name="wonder")
 source_app.add_typer(seer_app, name="seer")
 source_app.add_typer(cdc_open_app, name="cdc-open")
+source_app.add_typer(dqs_app, name="dqs")
 source_app.add_typer(wisqars_app, name="wisqars")
 source_app.add_typer(grasp_app, name="grasp")
 grasp_app.add_typer(grasp_hantavirus_app, name="hantavirus")
@@ -1186,6 +1200,13 @@ def _render_source_overview(json_out: bool) -> None:
             "years": "varies",
         },
         {
+            "name": "DQS",
+            "command": "pulse source dqs list / query / trend",
+            "coverage": "Health, United States — chronic disease, nutrition, disability, health-care system, spending",
+            "count": len(dqs_datasets()),
+            "years": "1960–present",
+        },
+        {
             "name": "WISQARS",
             "command": "pulse source wisqars mortality / national / state / county / tract / query",
             "coverage": "Injury, firearm, overdose, homicide, suicide deaths by geography",
@@ -1276,6 +1297,16 @@ def cdc_open_callback(
         _render_source_datasets("cdc-open", json_out)
 
 
+@dqs_app.callback(invoke_without_command=True)
+def dqs_callback(
+    ctx: typer.Context,
+    json_out: Annotated[bool, typer.Option("--json")] = False,
+):
+    """Bare `pulse source dqs` lists DQS datasets; subcommands query them."""
+    if ctx.invoked_subcommand is None:
+        _render_source_datasets("dqs", json_out)
+
+
 @wisqars_app.callback(invoke_without_command=True)
 def wisqars_callback(
     ctx: typer.Context,
@@ -1322,6 +1353,7 @@ _DOCTOR_ENDPOINTS = [
     ("WONDER", "https://wonder.cdc.gov/"),
     ("SEER", "https://seer.cancer.gov/statistics-network/explorer/"),
     ("CDC Open Data / WISQARS", "https://data.cdc.gov/resource/bi63-dtpu.json?$limit=1"),
+    ("DQS", "https://data.cdc.gov/resource/rdjz-vn2n.json?$limit=1"),
     ("GRASP", "https://gis.cdc.gov/grasp/HantavirusCaseViewAPI/GetData_JSON?appVersion=Public"),
     ("GRASP / NSSP (Delphi)", "https://api.delphi.cmu.edu/epidata/covidcast_meta/"),
     # A specific year's file, not the bare directory listing — the directory
@@ -1790,6 +1822,125 @@ def cmd_cdc_open_query(
         )
     except Exception as e:
         err.print(f"[red]Error from CDC Open Data:[/red] {e}")
+        raise typer.Exit(1)
+
+    _print_rows(rows, format, output)
+
+
+# ── dqs ───────────────────────────────────────────────────────────────────────
+
+
+@dqs_app.command("list")
+def cmd_dqs_list(
+    search: Annotated[Optional[str], typer.Option("--search", "-s", help="Substring match on key/name/topic/survey")] = None,
+    topic: Annotated[Optional[str], typer.Option("--topic", "-t", help="Filter to one topic bucket")] = None,
+    json_out: Annotated[bool, typer.Option("--json")] = False,
+):
+    """List/search the NCHS DQS dataset registry (28 Health, United States tables)."""
+    ds = dqs_search(search) if search else dqs_datasets()
+    if topic:
+        tl = topic.strip().lower()
+        ds = [d for d in ds if tl in d.topic.lower()]
+
+    if json_out:
+        print(
+            json.dumps(
+                [
+                    {
+                        "key": d.key,
+                        "id": d.id,
+                        "name": d.name,
+                        "topic": d.topic,
+                        "survey": d.survey,
+                        "years": d.years,
+                        "dimensions": d.dimensions,
+                    }
+                    for d in ds
+                ],
+                indent=2,
+            )
+        )
+        return
+
+    t = Table(box=box.ROUNDED, show_header=True, header_style="bold cyan", expand=True)
+    t.add_column("Key", style="yellow", width=26, no_wrap=True)
+    t.add_column("Topic", width=22, no_wrap=True)
+    t.add_column("Survey", width=10, no_wrap=True)
+    t.add_column("Years", width=12, no_wrap=True)
+    t.add_column("Name", ratio=1)
+    for d in ds:
+        t.add_row(d.key, d.topic, d.survey, d.years, d.name)
+
+    console.print()
+    console.print(t)
+    console.print(
+        f"\n[dim]{len(ds)} datasets  |  topics: {', '.join(dqs_topic_list())}  |  "
+        f"[bold]pulse source dqs query <key>[/bold] or [bold]trend <key>[/bold][/dim]\n"
+    )
+
+
+@dqs_app.command("query")
+def cmd_dqs_query(
+    dataset_id: Annotated[str, typer.Argument(help="Registry key (e.g. drug-overdose-deaths) or Socrata ID")],
+    where: Annotated[Optional[str], typer.Option("--where", help="SODA $where clause")] = None,
+    select: Annotated[Optional[str], typer.Option("--select", help="SODA $select clause")] = None,
+    group: Annotated[Optional[str], typer.Option("--group", help="SODA $group clause")] = None,
+    order: Annotated[Optional[str], typer.Option("--order", help="SODA $order clause")] = None,
+    limit: Annotated[int, typer.Option("--limit", help="Max rows")] = 200,
+    format: Annotated[str, typer.Option("-f", "--format")] = "table",
+    output: Annotated[Optional[Path], typer.Option("-o", "--output")] = None,
+):
+    """Run a raw SODA query against a DQS dataset. `classification='Total'` is the all-persons row."""
+    ds = dqs_dataset(dataset_id)
+    socrata_id = ds.id if ds else dataset_id
+    err.print(f"[bold]Querying:[/bold] {socrata_id}" + (f"  ({ds.name})" if ds else ""))
+
+    try:
+        rows = dqs_query(dataset_id, where=where, select=select, group=group, order=order, limit=limit)
+    except Exception as e:
+        err.print(f"[red]Error from CDC DQS:[/red] {e}")
+        raise typer.Exit(1)
+
+    _print_rows(rows, format, output)
+
+
+@dqs_app.command("trend")
+def cmd_dqs_trend(
+    dataset_id: Annotated[str, typer.Argument(help="Registry key or Socrata ID")],
+    estimate_type: Annotated[
+        Optional[str], typer.Option("--estimate-type", "-e", help="Narrow to one measure (see --list-measures)")
+    ] = None,
+    list_measures: Annotated[
+        bool, typer.Option("--list-measures", help="Print the dataset's estimate_type values and exit")
+    ] = False,
+    limit: Annotated[int, typer.Option("--limit")] = 1000,
+    format: Annotated[str, typer.Option("-f", "--format")] = "table",
+    output: Annotated[Optional[Path], typer.Option("-o", "--output")] = None,
+):
+    """All-persons ('Total') national trend for a DQS dataset, oldest→newest."""
+    ds = dqs_dataset(dataset_id)
+    socrata_id = ds.id if ds else dataset_id
+
+    if list_measures:
+        try:
+            measures = dqs_estimate_types(dataset_id)
+        except Exception as e:
+            err.print(f"[red]Error from CDC DQS:[/red] {e}")
+            raise typer.Exit(1)
+        err.print(f"[bold]{socrata_id}[/bold]" + (f"  ({ds.name})" if ds else "") + " — estimate types:")
+        for m in measures:
+            console.print(f"  • {m}")
+        return
+
+    err.print(f"[bold]Trend:[/bold] {socrata_id}" + (f"  ({ds.name})" if ds else ""))
+    try:
+        rows = dqs_trend(dataset_id, estimate_type=estimate_type, limit=limit)
+    except Exception as e:
+        err.print(f"[red]Error from CDC DQS:[/red] {e}")
+        raise typer.Exit(1)
+
+    if not rows:
+        err.print("[yellow]No 'Total' rows returned. Try `pulse source dqs query` with a --where filter.[/yellow]")
         raise typer.Exit(1)
 
     _print_rows(rows, format, output)

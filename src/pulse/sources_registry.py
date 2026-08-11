@@ -16,6 +16,7 @@ from typing import Callable
 
 from pulse.catalog import Catalog
 from pulse.cdc_open_catalog import datasets as _cdc_open_datasets
+from pulse.dqs_catalog import datasets as _dqs_datasets
 from pulse.grasp_catalog import DATASETS as _GRASP_DATASETS
 from pulse.nis_catalog import SURVEY_YEARS as _NIS_SURVEY_YEARS
 from pulse.nssp_client import SIGNALS as _NSSP_SIGNALS
@@ -73,6 +74,20 @@ def cdc_open_source_datasets() -> list[SourceDataset]:
             credit="CDC — data.cdc.gov",
         )
         for d in _cdc_open_datasets()
+    ]
+
+
+def dqs_source_datasets() -> list[SourceDataset]:
+    return [
+        SourceDataset(
+            key=d.key,
+            title=d.name,
+            url=f"https://data.cdc.gov/d/{d.id}",
+            years=d.years,
+            credit="CDC/NCHS — Data Query System (Health, United States)",
+            notes=f"{d.survey} · {d.topic}",
+        )
+        for d in _dqs_datasets()
     ]
 
 
@@ -136,6 +151,7 @@ SOURCE_DATASET_FNS: dict[str, Callable[[], list[SourceDataset]]] = {
     "wonder": wonder_source_datasets,
     "seer": seer_source_datasets,
     "cdc-open": cdc_open_source_datasets,
+    "dqs": dqs_source_datasets,
     "wisqars": wisqars_source_datasets,
     "grasp": grasp_source_datasets,
     "nssp": nssp_source_datasets,

@@ -6,7 +6,7 @@
 [![Pages](https://img.shields.io/github/actions/workflow/status/fartbagxp/pulse-code/pages.yml?style=for-the-badge&label=pages)](https://fartbagxp.github.io/pulse-code/)
 [![License](https://img.shields.io/badge/license-CC0--1.0-blue?style=for-the-badge)](LICENSE)
 
-`pulse` is a command line tool for querying public health data. It covers seven live sources: CDC WONDER, NCI SEER cancer statistics, CDC Open Data, WISQARS injury data, ATSDR GRASP disease surveillance, NSSP ED visits, and NIS vaccination surveys. Browse them by topic, run bundled queries, and get CSV, JSON, or a table back.
+`pulse` is a command line tool for querying public health data. It covers eight live sources: CDC WONDER, NCI SEER cancer statistics, CDC Open Data, the NCHS Data Query System (Health, United States), WISQARS injury data, ATSDR GRASP disease surveillance, NSSP ED visits, and NIS vaccination surveys. Browse them by topic, run bundled queries, and get CSV, JSON, or a table back.
 
 ![pulse-code demo](docs/demo/pulse-demo.gif)
 
@@ -21,7 +21,7 @@ pulse --help
 uv run pulse --help
 ```
 
-Querying any of the seven sources needs no API key or login. The `build`, `query`, `refine`, `compare`, and `chat` commands call an LLM to write CDC WONDER XML for you, so those need a key:
+Querying any of the eight sources needs no API key or login. The `build`, `query`, `refine`, `compare`, and `chat` commands call an LLM to write CDC WONDER XML for you, so those need a key:
 
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...
@@ -36,7 +36,7 @@ Five top level commands. `topics` browses by subject across all sources, `source
 Start with a subject if you don't know which source holds what you want:
 
 ```bash
-pulse topics                                         # every subject across all seven sources
+pulse topics                                         # every subject across all eight sources
 pulse topics mortality                               # drill into one
 pulse search "opioid overdose deaths by state"
 pulse search "tick-borne disease cases" --queries    # queries only
@@ -85,6 +85,20 @@ pulse source cdc-open query bi63-dtpu --where "state='California'" --limit 500 -
 ```
 
 Raw [SODA](https://dev.socrata.com/) queries (`--where`, `--select`, `--group`, `--order`) against any registered Socrata dataset, by registry key or Socrata ID. Set `CDC_DATA_APP_TOKEN` for a higher rate limit.
+
+### `pulse source dqs`: NCHS Data Query System (Health, United States)
+
+```bash
+pulse source dqs list                                        # 28 datasets across 17 topics
+pulse source dqs list --topic "Chronic Disease"              # filter by topic bucket
+pulse source dqs list --search cholesterol
+pulse source dqs trend drug-overdose-deaths -f csv           # all-persons national trend, oldest→newest
+pulse source dqs trend cholesterol-adults --list-measures    # see a dataset's estimate types
+pulse source dqs trend cholesterol-adults -e "mg/dL, age adjusted" -f csv
+pulse source dqs query nhis-adult --where "classification='Total'" --limit 500 -f json
+```
+
+The unified query layer over CDC's [Data Query System](https://www.cdc.gov/nchs/dqs/) — the "Health, United States" report family drawn from NHANES, NHIS, NHAMCS, NVSS, NPALS, and NHCS. Every DQS topic is published as a Socrata dataset on data.cdc.gov sharing one tidy schema (`topic / classification / group / subgroup / estimate_type / time_period / estimate / lci / uci`), so a single query verb covers all 28. `classification = 'Total'` is the all-persons row; other classifications are demographic, geographic, or socioeconomic cuts. Fills in areas the other sources don't: chronic-disease and risk-factor prevalence, nutrition, oral health, disability, self-reported health, the health-care system (beds, ED visits, utilization), workforce, spending, and long-term care. Backed by the same Socrata client as `cdc-open`; set `CDC_DATA_APP_TOKEN` for a higher rate limit.
 
 ### `pulse source wisqars`: Injury and Violence Data
 
