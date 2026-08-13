@@ -235,6 +235,15 @@
       "year_range": "2018-2024"
     },
     {
+      "filename": "deaths-by-place-of-death-2018-2024-req.xml",
+      "dataset_id": "D176",
+      "description": "All-cause deaths by month and place of death (hospital, home, nursing home, ER/outpatient), 2018-2024 — shows the April 2020 hospital death spike",
+      "topic": "Mortality",
+      "tags": ["place of death", "hospital", "nursing home", "COVID", "COVID-19", "pandemic", "monthly", "deaths", "recent", "provisional"],
+      "groupings": ["Year", "Month", "Place of Death"],
+      "year_range": "2018-2024"
+    },
+    {
       "filename": "racial-mortality-gap-2018-2023-req.xml",
       "dataset_id": "D176",
       "description": "Racial mortality gap — deaths by race and ethnicity, 2018-2023",

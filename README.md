@@ -60,7 +60,7 @@ pulse source wonder run drug-deaths-by-year-2018-2024-req.xml -f csv
 pulse source wonder query "fentanyl deaths by state 2020-2024" -f csv
 ```
 
-Mortality, natality, VAERS, and environmental datasets going back to 1968, with 58 bundled XML queries and LLM-backed commands that write new ones. CDC requires 15 seconds between queries. Full command reference and the dataset table: [docs/cdc-wonder.md](docs/cdc-wonder.md).
+Mortality, natality, VAERS, and environmental datasets going back to 1968, with 59 bundled XML queries and LLM-backed commands that write new ones. CDC requires 15 seconds between queries. Full command reference and the dataset table: [docs/cdc-wonder.md](docs/cdc-wonder.md).
 
 ### `pulse source seer`: NCI SEER Cancer Statistics
 
@@ -177,6 +177,6 @@ pulse-code  →  health  →  health-charts
 
 [fartbagxp/health](https://github.com/fartbagxp/health) archives the same sources as this project on a schedule. It's also home to the CDC WONDER XML API client and LLM query builder this tool builds on.
 
-**pulse** is where a query starts; **health** is where it graduates once someone wants to collect it as a scheduled job. 23 of the 58 saved WONDER queries in `src/pulse/queries/` are also in `health`, each wrapped in a `fetch_*.py` script. The rest are exploration only for now — cancer and AIDS broken out by state, fetal deaths by race, PM2.5 by state, plus a pile of demographic slices for COVID, opioids, and maternal mortality. `pulse`'s source clients are standalone reimplementations of `health`'s modules, kept to just `requests` instead of pulling in the `pandas`/`playwright`/`lxml` stack that `health`'s pipelines need.
+**pulse** is where a query starts; **health** is where it graduates once someone wants to collect it as a scheduled job. 23 of the 59 saved WONDER queries in `src/pulse/queries/` are also in `health`, each wrapped in a `fetch_*.py` script. The rest are exploration only for now — cancer and AIDS broken out by state, fetal deaths by race, PM2.5 by state, deaths by place of death, plus a pile of demographic slices for COVID, opioids, and maternal mortality. `pulse`'s source clients are standalone reimplementations of `health`'s modules, kept to just `requests` instead of pulling in the `pandas`/`playwright`/`lxml` stack that `health`'s pipelines need.
 
 [fartbagxp/health-charts](https://github.com/fartbagxp/health-charts) reads those archived CSVs from GitHub and renders them as an interactive chart site.
