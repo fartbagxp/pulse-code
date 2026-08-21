@@ -1,7 +1,7 @@
 """
 GRASP SDK — query functions for ATSDR/CDC GRASP disease APIs.
 
-Data source: gis.cdc.gov/grasp (ATSDR Geographic Research, Analysis, and Services Program)
+Data source: gis.cdc.gov (ATSDR Geographic Research, Analysis, and Services Program)
 FluView/FluSurv data sourced via the CMU Delphi Epidata API (api.delphi.cmu.edu/epidata/).
 No authentication required.
 

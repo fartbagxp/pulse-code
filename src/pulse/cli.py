@@ -1354,7 +1354,7 @@ _DOCTOR_ENDPOINTS = [
     ("SEER", "https://seer.cancer.gov/statistics-network/explorer/"),
     ("CDC Open Data / WISQARS", "https://data.cdc.gov/resource/bi63-dtpu.json?$limit=1"),
     ("DQS", "https://data.cdc.gov/resource/rdjz-vn2n.json?$limit=1"),
-    ("GRASP", "https://gis.cdc.gov/grasp/HantavirusCaseViewAPI/GetData_JSON?appVersion=Public"),
+    ("GRASP", GRASP_DATASETS["hantavirus"].url),
     ("GRASP / NSSP (Delphi)", "https://api.delphi.cmu.edu/epidata/covidcast_meta/"),
     # A specific year's file, not the bare directory listing — the directory
     # itself returns 200 even for missing files. 2022 lives on the newer
