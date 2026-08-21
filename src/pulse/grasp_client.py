@@ -1,5 +1,5 @@
 """
-Low-level HTTP client for ATSDR GRASP APIs at gis.cdc.gov/grasp/ and the
+Low-level HTTP client for ATSDR GRASP APIs at gis.cdc.gov/ and the
 CMU Delphi Epidata API at api.delphi.cmu.edu/epidata/.
 
 GRASP endpoints return a JSON object with a top-level "Data" array.

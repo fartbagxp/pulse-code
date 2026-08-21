@@ -2,7 +2,7 @@
 ATSDR GRASP dataset registry.
 
 GRASP (Geographic Research, Analysis, and Services Program) is a suite of
-disease-specific REST APIs hosted at gis.cdc.gov/grasp/. Each application
+disease-specific REST APIs hosted at gis.cdc.gov/. Each application
 exposes a GetData_JSON endpoint that returns patient-level or aggregate records.
 
 No authentication is required. Datasets are fetched in full (no pagination).
@@ -24,7 +24,7 @@ class GraspDataset:
     key_columns: list[str] = field(default_factory=list)
 
 
-_GRASP_BASE = "https://gis.cdc.gov/grasp"
+_GRASP_BASE = "https://gis.cdc.gov"
 _DELPHI_BASE = "https://api.delphi.cmu.edu/epidata"
 
 DATASETS: dict[str, GraspDataset] = {
