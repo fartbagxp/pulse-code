@@ -1084,6 +1084,57 @@
         "malignant_neoplasms",
         "covid_19_u071_underlying_cause_of_death"
       ]
+    },
+    {
+      "key": "wastewater_mpox",
+      "id": "xpxn-rzgz",
+      "name": "CDC Wastewater Data for Mpox",
+      "description": "Mpox (monkeypox) DNA concentrations from US wastewater sampling sites via NWSS, updated weekly",
+      "years": "2025–present",
+      "key_columns": [
+        "state_territory",
+        "sample_collect_date",
+        "counties_served",
+        "population_served",
+        "pcr_target_detect",
+        "pcr_target_avg_conc",
+        "pcr_target_flowpop_lin",
+        "date_updated"
+      ]
+    },
+    {
+      "key": "nwss_metric",
+      "id": "2ew6-ywp6",
+      "name": "NWSS Public SARS-CoV-2 Wastewater Metric Data",
+      "description": "Interpreted NWSS COVID-19 wastewater metric: per-site 15-day percent change, detection proportion, and activity percentile relative to each site's history",
+      "years": "2020–present",
+      "key_columns": [
+        "reporting_jurisdiction",
+        "county_fips",
+        "population_served",
+        "date_start",
+        "date_end",
+        "ptc_15d",
+        "detect_prop_15d",
+        "percentile"
+      ]
+    },
+    {
+      "key": "rapid_surveys",
+      "id": "p89x-xx88",
+      "name": "NCHS Rapid Surveys System",
+      "description": "Quick-turnaround national health estimates from NCHS's Rapid Surveys System, collected quarterly in rounds from commercial probability panels; one row per indicator x demographic subgroup",
+      "years": "2023–present",
+      "key_columns": [
+        "round",
+        "topic",
+        "indicator",
+        "full_indicator",
+        "demographic_variable",
+        "demographic_variable_label",
+        "estimate",
+        "confidence_interval"
+      ]
     }
   ]
 }
