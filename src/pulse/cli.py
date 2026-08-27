@@ -6,6 +6,7 @@ import csv
 import io
 import json
 import time
+from importlib.metadata import PackageNotFoundError, version as _pkg_version
 from pathlib import Path
 from typing import Annotated, Optional
 
@@ -136,6 +137,33 @@ app = typer.Typer(
     add_completion=False,
     no_args_is_help=True,
 )
+
+
+def _version_callback(value: bool) -> None:
+    if value:
+        try:
+            ver = _pkg_version("pulse-code")
+        except PackageNotFoundError:  # running from a source tree without install metadata
+            ver = "unknown"
+        typer.echo(f"pulse {ver}")
+        raise typer.Exit()
+
+
+@app.callback()
+def main_callback(
+    version: Annotated[
+        Optional[bool],
+        typer.Option(
+            "--version",
+            callback=_version_callback,
+            is_eager=True,
+            help="Show the pulse version and exit.",
+        ),
+    ] = None,
+) -> None:
+    """CDC public health data query CLI."""
+
+
 # `source` is a group that does double duty: bare `pulse source` prints the
 # 7-source overview, `pulse source <name>` prints that source's dataset list,
 # and `pulse source <name> <verb>` runs a query. Each source sub-app therefore
