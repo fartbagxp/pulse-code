@@ -1,4 +1,8 @@
-"""Unit tests for `pulse doctor` — monkeypatches the network check, no live calls here."""
+"""Unit tests for `pulse doctor` — monkeypatches the network check, no live calls here.
+
+The fakes take `user_agent` because some endpoints are probed under a specific one
+(www.cdc.gov 403s the default probe agent; WONDER 500s under the SDK's).
+"""
 
 from __future__ import annotations
 
@@ -11,14 +15,14 @@ runner = CliRunner()
 
 
 def test_doctor_all_reachable_exits_zero(monkeypatch):
-    monkeypatch.setattr(cli, "_check_url", lambda url, timeout=8.0: (True, "HTTP 200  10ms"))
+    monkeypatch.setattr(cli, "_check_url", lambda url, timeout=8.0, user_agent="pulse-doctor": (True, "HTTP 200  10ms"))
     result = runner.invoke(app, ["doctor"])
     assert result.exit_code == 0
     assert "All sources reachable" in result.stdout
 
 
 def test_doctor_unreachable_source_exits_nonzero(monkeypatch):
-    def fake_check(url, timeout=8.0):
+    def fake_check(url, timeout=8.0, user_agent="pulse-doctor"):
         if "nis" in url.lower():
             return False, "HTTP 404  10ms"
         return True, "HTTP 200  10ms"
@@ -30,7 +34,7 @@ def test_doctor_unreachable_source_exits_nonzero(monkeypatch):
 
 
 def test_doctor_reports_missing_anthropic_key(monkeypatch):
-    monkeypatch.setattr(cli, "_check_url", lambda url, timeout=8.0: (True, "HTTP 200  10ms"))
+    monkeypatch.setattr(cli, "_check_url", lambda url, timeout=8.0, user_agent="pulse-doctor": (True, "HTTP 200  10ms"))
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.delenv("LLM_PROVIDER", raising=False)
     result = runner.invoke(app, ["doctor"])
@@ -39,7 +43,7 @@ def test_doctor_reports_missing_anthropic_key(monkeypatch):
 
 
 def test_doctor_reports_set_anthropic_key(monkeypatch):
-    monkeypatch.setattr(cli, "_check_url", lambda url, timeout=8.0: (True, "HTTP 200  10ms"))
+    monkeypatch.setattr(cli, "_check_url", lambda url, timeout=8.0, user_agent="pulse-doctor": (True, "HTTP 200  10ms"))
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-test")
     monkeypatch.delenv("LLM_PROVIDER", raising=False)
     result = runner.invoke(app, ["doctor"])

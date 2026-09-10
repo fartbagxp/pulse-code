@@ -6,7 +6,7 @@
 [![Pages](https://img.shields.io/github/actions/workflow/status/fartbagxp/pulse-code/pages.yml?style=for-the-badge&label=pages)](https://fartbagxp.github.io/pulse-code/)
 [![License](https://img.shields.io/badge/license-CC0--1.0-blue?style=for-the-badge)](LICENSE)
 
-`pulse` is a command line tool for querying public health data. It covers eight live sources: CDC WONDER, NCI SEER cancer statistics, CDC Open Data, the NCHS Data Query System (Health, United States), WISQARS injury data, ATSDR GRASP disease surveillance, NSSP ED visits, and NIS vaccination surveys. Browse them by topic, run bundled queries, and get CSV, JSON, or a table back.
+`pulse` is a command line tool for querying public health data. It covers nine live sources: CDC WONDER, NCI SEER cancer statistics, CDC Open Data, the NCHS Data Query System (Health, United States), WISQARS injury data, ATSDR GRASP disease surveillance, NSSP ED visits, NIS vaccination surveys, and SUDORS fatal-overdose surveillance. Browse them by topic, run bundled queries, and get CSV, JSON, or a table back.
 
 ![pulse-code demo](docs/demo/pulse-demo.gif)
 
@@ -21,7 +21,7 @@ pulse --help
 uv run pulse --help
 ```
 
-Querying any of the eight sources needs no API key or login. The `build`, `query`, `refine`, `compare`, and `chat` commands call an LLM to write CDC WONDER XML for you, so those need a key:
+Querying any of the nine sources needs no API key or login. The `build`, `query`, `refine`, `compare`, and `chat` commands call an LLM to write CDC WONDER XML for you, so those need a key:
 
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...
@@ -36,7 +36,7 @@ Five top level commands. `topics` browses by subject across all sources, `source
 Start with a subject if you don't know which source holds what you want:
 
 ```bash
-pulse topics                                         # every subject across all eight sources
+pulse topics                                         # every subject across all nine sources
 pulse topics mortality                               # drill into one
 pulse search "opioid overdose deaths by state"
 pulse search "tick-borne disease cases" --queries    # queries only
@@ -99,6 +99,28 @@ pulse source dqs query nhis-adult --where "classification='Total'" --limit 500 -
 ```
 
 The unified query layer over CDC's [Data Query System](https://www.cdc.gov/nchs/dqs/) — the "Health, United States" report family drawn from NHANES, NHIS, NHAMCS, NVSS, NPALS, and NHCS. Every DQS topic is published as a Socrata dataset on data.cdc.gov sharing one tidy schema (`topic / classification / group / subgroup / estimate_type / time_period / estimate / lci / uci`), so a single query verb covers all 28. `classification = 'Total'` is the all-persons row; other classifications are demographic, geographic, or socioeconomic cuts. Fills in areas the other sources don't: chronic-disease and risk-factor prevalence, nutrition, oral health, disability, self-reported health, the health-care system (beds, ED visits, utilization), workforce, spending, and long-term care. Backed by the same Socrata client as `cdc-open`; set `CDC_DATA_APP_TOKEN` for a higher rate limit.
+
+### `pulse source sudors`: SUDORS Fatal Overdose Surveillance
+
+```bash
+pulse source sudors list                                     # 13 slices
+pulse source sudors release                                  # which release this is
+pulse source sudors drugs -y 2024 -j Overall -f csv          # drugs ruled as causing death
+pulse source sudors drugs --detected -y 2024 -j Overall      # xylazine, nitazenes, carfentanil, bromazolam
+pulse source sudors circumstances -y 2024 -j Ohio --section Bystanders
+pulse source sudors demographics -y 2024 -j Ohio -d race_ethnicity
+pulse source sudors months -y 2024 -j Overall --drug fentanyl -f csv
+pulse source sudors trend -r "2020 to 2024" -m alldrug_rate  # the comparable series
+pulse source sudors jurisdictions -y 2024
+```
+
+CDC's [State Unintentional Drug Overdose Reporting System](https://www.cdc.gov/overdose-prevention/data-research/facts-stats/about-sudors.html) — death-investigation surveillance across 49 states and DC, abstracting >600 elements per death from the death certificate, the medical examiner/coroner report, and postmortem toxicology.
+
+It answers what WONDER structurally cannot. ICD-10 puts every synthetic opioid but methadone in `T40.4`, so WONDER cannot separate illegally-made fentanyls from carfentanil or nitazene analogs, and xylazine and bromazolam have no code at all — SUDORS names each from toxicology. It also carries circumstances no death certificate holds: bystander present, naloxone administered, prior overdose, recent institutional release, route of use.
+
+Two things to know. **The annual `Overall` row is not a time series** — a jurisdiction counts toward a year only if it reported every overdose death and had circumstance data on ≥75% of them, and that set changes annually (34 jurisdictions in 2020, 43 in 2024), so plotting it charts coverage as much as mortality; `trend` holds the jurisdiction set fixed instead. And **SUDORS will not reconcile with WONDER**, by design: its case definition adds a literal-text arm (`"overdose"`, `"toxicity"`, `"intoxication"`) on top of X40–X44 / Y10–Y14, and it counts occurrent rather than resident deaths.
+
+There is no SUDORS API — these commands read the public dashboard's own JSON payloads, and CDC's workbook for the trend tables. Data years 2020–2024, restated annually.
 
 ### `pulse source wisqars`: Injury and Violence Data
 

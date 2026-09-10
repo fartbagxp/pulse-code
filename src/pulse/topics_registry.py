@@ -104,6 +104,7 @@ TOPICS: list[Topic] = [
             TopicSource("cdc-open", "Provisional/county-level drug overdose deaths", "1999–present", "pulse source cdc-open query drug_overdose_vsrr"),
             TopicSource("wonder", "Drug/homicide/suicide detail via multi-cause mortality", "1999–present", "pulse source wonder datasets --topic Mortality"),
             TopicSource("dqs", "Age-adjusted suicide and drug-overdose death rates by drug type (Health, United States)", "2018–2024", "pulse source dqs trend drug-overdose-deaths"),
+            TopicSource("sudors", "Specific drugs from postmortem toxicology (xylazine, nitazenes, carfentanil) plus death circumstances — 49 states + DC, not a national census", "2020–2024", "pulse source sudors drugs --detected -y 2024 -j Overall"),
         ),
     ),
     Topic(

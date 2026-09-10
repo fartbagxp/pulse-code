@@ -21,6 +21,9 @@ from pulse.grasp_catalog import DATASETS as _GRASP_DATASETS
 from pulse.nis_catalog import SURVEY_YEARS as _NIS_SURVEY_YEARS
 from pulse.nssp_client import SIGNALS as _NSSP_SIGNALS
 from pulse.seer_catalog import cancer_sites as _seer_cancer_sites
+from pulse.sudors_catalog import DASHBOARD_URL as _SUDORS_DASHBOARD_URL
+from pulse.sudors_catalog import YEARS as _SUDORS_YEARS
+from pulse.sudors_catalog import datasets as _sudors_datasets
 from pulse.wisqars_catalog import DATASETS as _WISQARS_DATASETS
 from pulse.wonder_client import WonderClient
 
@@ -147,6 +150,22 @@ def nis_source_datasets() -> list[SourceDataset]:
     return rows
 
 
+def sudors_source_datasets() -> list[SourceDataset]:
+    # SUDORS has no per-dataset landing pages — the whole release is one dashboard
+    # and one workbook — so every row points at the dashboard itself.
+    return [
+        SourceDataset(
+            key=d.key,
+            title=d.name,
+            url=_SUDORS_DASHBOARD_URL,
+            years=_SUDORS_YEARS,
+            credit="CDC — SUDORS (OD2A-S), National Center for Injury Prevention and Control",
+            notes=d.grain,
+        )
+        for d in _sudors_datasets()
+    ]
+
+
 SOURCE_DATASET_FNS: dict[str, Callable[[], list[SourceDataset]]] = {
     "wonder": wonder_source_datasets,
     "seer": seer_source_datasets,
@@ -156,4 +175,5 @@ SOURCE_DATASET_FNS: dict[str, Callable[[], list[SourceDataset]]] = {
     "grasp": grasp_source_datasets,
     "nssp": nssp_source_datasets,
     "nis": nis_source_datasets,
+    "sudors": sudors_source_datasets,
 }

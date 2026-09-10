@@ -149,6 +149,26 @@ SOURCES: list[Source] = [
         "pulse source nis rates child 2022 --vaccines P_UTD431 -f table",
         "#4ade80",
     ),
+    Source(
+        "DQS",
+        "dqs",
+        "Health, United States — chronic disease, nutrition, disability, spending",
+        "28",
+        "1960–present",
+        "list / query / trend",
+        "pulse source dqs trend drug-overdose-deaths -f csv",
+        "#a78bfa",
+    ),
+    Source(
+        "SUDORS",
+        "sudors",
+        "Fatal overdose detail from toxicology & death investigations",
+        "13",
+        "2020–2024",
+        "list / drugs / circumstances / demographics / months / trend",
+        "pulse source sudors drugs --detected -y 2024 -j Overall -f csv",
+        "#f87171",
+    ),
 ]
 
 
@@ -575,7 +595,7 @@ def render_index(catalog: dict, by_dataset: dict[str, list[dict]]) -> str:
 
 <section class="chapter" id="sources">
   <p class="ch-kicker">{len(SOURCES)} Sources</p>
-  <h2 class="ch-h">One CLI, seven sources.</h2>
+  <h2 class="ch-h">One CLI, nine sources.</h2>
   <p class="ch-p">
     You reach every source the same way: <code>pulse source</code> for the
     overview, <code>pulse source &lt;name&gt;</code> for its datasets, and
@@ -668,7 +688,7 @@ def render_wonder(catalog: dict, by_dataset: dict[str, list[dict]]) -> str:
     This is a reference for reviewing or building those requests, color-coded
     by category, with a plain-English explanation for every parameter in every
     bundled query. WONDER is one of the
-    <a href="index.html#sources">seven sources</a> pulse covers, and the only
+    <a href="index.html#sources">nine sources</a> pulse covers, and the only
     one whose requests are written in XML, which is why it gets its own
     reference.
   </p>
@@ -775,7 +795,7 @@ def render_usage() -> str:
   <h1>Using the pulse CLI.</h1>
   <p class="hero-p">
     pulse has two halves: a light half for finding and running data you can
-    already describe, across all seven sources, and a heavier half that hands
+    already describe, across all nine sources, and a heavier half that hands
     your request to an LLM to write CDC WONDER XML for you. Start with the
     light half. It never calls an LLM, so it's faster and needs no provider
     key.
@@ -814,7 +834,7 @@ def render_usage() -> str:
   <h2 class="ch-h">Figure out what's available.</h2>
   <p class="ch-p">None of this calls an LLM. It's all local keyword matching over the bundled catalogs, across every source.</p>
 
-  <p class="ch-p"><strong style="color:var(--t)">Start with a subject</strong> if you don't know which source holds what you want. Topics span all seven sources:</p>
+  <p class="ch-p"><strong style="color:var(--t)">Start with a subject</strong> if you don't know which source holds what you want. Topics span all nine sources:</p>
 """
         + cmd("pulse topics\npulse topics mortality             # drill into one")
         + """

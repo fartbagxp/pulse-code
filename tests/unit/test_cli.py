@@ -79,9 +79,10 @@ def test_sources_json_output_is_valid():
     result = runner.invoke(app, ["source", "--json"])
     assert result.exit_code == 0
     data = json.loads(result.stdout)
-    assert len(data) == 8
+    assert len(data) == 9
     assert all("command" in s for s in data)
     assert any(s["name"] == "DQS" for s in data)
+    assert any(s["name"] == "SUDORS" for s in data)
 
 
 def test_topics_lists_categories():
