@@ -59,6 +59,28 @@ from pulse.seer_sdk import (
 )
 from pulse.soda_client import SodaClient
 from pulse.sources_registry import SOURCE_DATASET_FNS
+from pulse.sudors_catalog import ABOUT_URL as SUDORS_ABOUT_URL
+from pulse.sudors_catalog import BASE_URL as SUDORS_BASE_URL
+from pulse.sudors_catalog import CODING_MANUAL_URL as SUDORS_CODING_MANUAL_URL
+from pulse.sudors_catalog import DASHBOARD_URL as SUDORS_DASHBOARD_URL
+from pulse.sudors_catalog import dataset as sudors_dataset
+from pulse.sudors_catalog import datasets as sudors_datasets
+from pulse.sudors_catalog import search as sudors_search
+from pulse.sudors_sdk import LOADERS as SUDORS_LOADERS
+from pulse.sudors_sdk import USER_AGENT as SUDORS_USER_AGENT
+from pulse.sudors_sdk import (
+    SudorsError,
+    filter_rows,
+    get_circumstances,
+    get_deaths_by_month,
+    get_demographics,
+    get_drugs_detected,
+    get_drugs_involved,
+    get_release,
+    get_trend,
+    get_trend_statistics,
+)
+from pulse.sudors_sdk import jurisdictions as sudors_jurisdictions
 from pulse.topics_registry import TOPICS, find_topic
 from pulse.wisqars_catalog import DATASETS as WISQARS_DATASETS
 from pulse.wisqars_catalog import INJURY_INTENTS, INJURY_MECHANISMS, MAPPING_INTENTS, MAPPING_PERIOD_TYPES
@@ -238,6 +260,12 @@ nis_app = typer.Typer(
     no_args_is_help=False,
     invoke_without_command=True,
 )
+sudors_app = typer.Typer(
+    help="SUDORS fatal overdose surveillance — drugs from toxicology, plus death circumstances.",
+    add_completion=False,
+    no_args_is_help=False,
+    invoke_without_command=True,
+)
 app.add_typer(source_app, name="source")
 source_app.add_typer(wonder_app, name="wonder")
 source_app.add_typer(seer_app, name="seer")
@@ -250,6 +278,7 @@ grasp_app.add_typer(grasp_fluview_app, name="fluview")
 grasp_app.add_typer(grasp_flusurv_app, name="flusurv")
 source_app.add_typer(nssp_app, name="nssp")
 source_app.add_typer(nis_app, name="nis")
+source_app.add_typer(sudors_app, name="sudors")
 console = Console()
 err = Console(stderr=True)
 
@@ -1262,6 +1291,13 @@ def _render_source_overview(json_out: bool) -> None:
             "count": 2,
             "years": "2011–2022",
         },
+        {
+            "name": "SUDORS",
+            "command": "pulse source sudors drugs / circumstances / demographics / months / trend",
+            "coverage": "Fatal overdose detail from toxicology & death investigations — drugs ICD-10 cannot name",
+            "count": len(sudors_datasets()),
+            "years": "2020–2024",
+        },
     ]
 
     if json_out:
@@ -1323,6 +1359,16 @@ def cdc_open_callback(
     """Bare `pulse source cdc-open` lists CDC Open Data datasets; subcommands run queries."""
     if ctx.invoked_subcommand is None:
         _render_source_datasets("cdc-open", json_out)
+
+
+@sudors_app.callback(invoke_without_command=True)
+def sudors_callback(
+    ctx: typer.Context,
+    json_out: Annotated[bool, typer.Option("--json")] = False,
+):
+    """Bare `pulse source sudors` lists SUDORS' slices; subcommands query them."""
+    if ctx.invoked_subcommand is None:
+        _render_source_datasets("sudors", json_out)
 
 
 @dqs_app.callback(invoke_without_command=True)
@@ -1390,17 +1436,25 @@ _DOCTOR_ENDPOINTS = [
     # not the legacy path's .sas — that split is what nis_catalog.py now
     # routes on via NISYear.format_type.
     ("NIS", "https://ftp.cdc.gov/pub/VACCINES_NIS/NISPUF22.R"),
+    # SUDORS has no API — a real dashboard payload is the only thing to probe, and
+    # a 404 here is exactly the signal that matters: it means CDC moved or renamed
+    # the dashboard's data path out from under us. www.cdc.gov 403s the default
+    # probe agent, so this row asks under the same UA the SDK uses; a 403 here
+    # would then be a real regression rather than the usual noise. (WONDER is the
+    # mirror image — it 403s the probe agent but 500s under the SDK's — so it
+    # keeps the default.)
+    ("SUDORS", f"{SUDORS_BASE_URL}/footnotes-text.json", SUDORS_USER_AGENT),
 ]
 
 
-def _check_url(url: str, timeout: float = 8.0) -> tuple[bool, str]:
+def _check_url(url: str, timeout: float = 8.0, user_agent: str = "pulse-doctor") -> tuple[bool, str]:
     import time
 
     import requests
 
     start = time.monotonic()
     try:
-        resp = requests.get(url, timeout=timeout, headers={"User-Agent": "pulse-doctor"})
+        resp = requests.get(url, timeout=timeout, headers={"User-Agent": user_agent})
         elapsed = (time.monotonic() - start) * 1000
         # A 404 means the specific resource moved/vanished (a real break, as
         # opposed to e.g. a 403 on a root path that just wants different
@@ -1442,8 +1496,8 @@ def cmd_doctor():
 
     console.print("[dim]Checking live reachability of each source (~5-10s)…[/dim]")
     all_reachable = True
-    for name, url in _DOCTOR_ENDPOINTS:
-        ok, detail = _check_url(url)
+    for name, url, *rest in _DOCTOR_ENDPOINTS:
+        ok, detail = _check_url(url, user_agent=rest[0]) if rest else _check_url(url)
         all_reachable = all_reachable and ok
         t.add_row(name, "[green]OK[/green]" if ok else "[red]FAIL[/red]", detail)
 
@@ -1972,6 +2026,329 @@ def cmd_dqs_trend(
         raise typer.Exit(1)
 
     _print_rows(rows, format, output)
+
+
+# ── sudors ────────────────────────────────────────────────────────────────────
+#
+# SUDORS has no API. Every command here reads the public dashboard's own JSON
+# payloads (and, for `trend`, CDC's workbook) and reshapes them to flat rows, so
+# the numbers are always the live release rather than a snapshot pinned in this
+# repo.
+
+
+def _sudors_render(rows: list[dict], format, output) -> None:
+    """Render SUDORS rows, pointing at the usual cause when a filter empties them."""
+    if not rows:
+        err.print(
+            "[yellow]No rows matched.[/yellow] Jurisdictions differ by year — "
+            "try [bold]pulse source sudors jurisdictions --year <year>[/bold]."
+        )
+        raise typer.Exit(1)
+    _print_rows(rows, format, output)
+
+
+def _sudors_rows(fn, year, jurisdiction, limit, format, output) -> None:
+    """Fetch, narrow, and render — the shape every SUDORS query command shares."""
+    try:
+        rows = filter_rows(fn(), year=year, jurisdiction=jurisdiction, limit=limit)
+    except SudorsError as e:
+        err.print(f"[red]Error from CDC SUDORS:[/red] {e}")
+        raise typer.Exit(1)
+    _sudors_render(rows, format, output)
+
+
+@sudors_app.command("list")
+def cmd_sudors_list(
+    search: Annotated[Optional[str], typer.Option("--search", "-s", help="Substring match on key/name/grain/description")] = None,
+    json_out: Annotated[bool, typer.Option("--json")] = False,
+):
+    """List/search the SUDORS slices this CLI can pull."""
+    ds = sudors_search(search) if search else sudors_datasets()
+
+    if json_out:
+        print(
+            json.dumps(
+                [
+                    {
+                        "key": d.key,
+                        "name": d.name,
+                        "topic": d.topic,
+                        "grain": d.grain,
+                        "sources": list(d.sources),
+                        "workbook": d.workbook,
+                        "description": d.description,
+                    }
+                    for d in ds
+                ],
+                indent=2,
+            )
+        )
+        return
+
+    t = Table(box=box.ROUNDED, show_header=True, header_style="bold cyan", expand=True)
+    t.add_column("Key", style="yellow", width=24, no_wrap=True)
+    t.add_column("Name", width=38)
+    t.add_column("Grain", ratio=1)
+    t.add_column("From", width=9, no_wrap=True)
+    for d in ds:
+        t.add_row(d.key, d.name, d.grain, "workbook" if d.workbook else "json")
+
+    console.print()
+    console.print(t)
+    console.print(
+        f"\n[dim]{len(ds)} slices  |  [bold]pulse source sudors get <key>[/bold] for any of them  |  "
+        f"[bold]drugs / circumstances / demographics / months / trend[/bold] for the shortcuts[/dim]\n"
+    )
+
+
+@sudors_app.command("drugs")
+def cmd_sudors_drugs(
+    detected: Annotated[
+        bool,
+        typer.Option(
+            "--detected",
+            help="Drugs found on toxicology (xylazine, nitazenes, carfentanil...) instead of drugs ruled as causing death",
+        ),
+    ] = False,
+    year: Annotated[Optional[int], typer.Option("--year", "-y", help="Data year")] = None,
+    jurisdiction: Annotated[Optional[str], typer.Option("--jurisdiction", "-j", help="State name, or 'Overall'")] = None,
+    limit: Annotated[Optional[int], typer.Option("--limit")] = None,
+    format: Annotated[str, typer.Option("-f", "--format")] = "table",
+    output: Annotated[Optional[Path], typer.Option("-o", "--output")] = None,
+):
+    """
+    Drugs involved in overdose deaths.
+
+    By default, the drug classes a medical examiner or coroner ruled as causing
+    death. With --detected, the drugs postmortem toxicology found whether or not
+    they were ruled a cause — the cut ICD-10 cannot express, since T40.4 collapses
+    every synthetic opioid but methadone into one code and xylazine has none.
+    """
+    _sudors_rows(get_drugs_detected if detected else get_drugs_involved, year, jurisdiction, limit, format, output)
+
+
+@sudors_app.command("circumstances")
+def cmd_sudors_circumstances(
+    section: Annotated[Optional[str], typer.Option("--section", help="Substring match on the circumstance section")] = None,
+    year: Annotated[Optional[int], typer.Option("--year", "-y")] = None,
+    jurisdiction: Annotated[Optional[str], typer.Option("--jurisdiction", "-j", help="State name, or 'Overall'")] = None,
+    limit: Annotated[Optional[int], typer.Option("--limit")] = None,
+    format: Annotated[str, typer.Option("-f", "--format")] = "table",
+    output: Annotated[Optional[Path], typer.Option("-o", "--output")] = None,
+):
+    """
+    Circumstances surrounding the death — what SUDORS exists for.
+
+    Bystander present, naloxone administered, prior overdose, recent release from
+    an institutional setting, route of use, current SUD treatment. None of it is
+    on a death certificate, so none of it is in WONDER. Percentages are among
+    decedents with known information and are floor estimates.
+    """
+    try:
+        rows = filter_rows(get_circumstances(), year=year, jurisdiction=jurisdiction)
+    except SudorsError as e:
+        err.print(f"[red]Error from CDC SUDORS:[/red] {e}")
+        raise typer.Exit(1)
+    if section:
+        want = section.strip().lower()
+        rows = [r for r in rows if want in (r.get("section") or "").lower()]
+    if limit:
+        rows = rows[:limit]
+    _sudors_render(rows, format, output)
+
+
+@sudors_app.command("demographics")
+def cmd_sudors_demographics(
+    dimension: Annotated[Optional[str], typer.Option("--dimension", "-d", help="One of: sex, age, race_ethnicity")] = None,
+    year: Annotated[Optional[int], typer.Option("--year", "-y")] = None,
+    jurisdiction: Annotated[Optional[str], typer.Option("--jurisdiction", "-j", help="State name, or 'Overall'")] = None,
+    limit: Annotated[Optional[int], typer.Option("--limit")] = None,
+    format: Annotated[str, typer.Option("-f", "--format")] = "table",
+    output: Annotated[Optional[Path], typer.Option("-o", "--output")] = None,
+):
+    """
+    Deaths by sex, age band, and race/ethnicity.
+
+    Sex and race/ethnicity rates are age-standardized to the 2010 U.S. Census;
+    age-band rates are crude. Census switched to differential privacy for 2021
+    population estimates, so 2021+ rates are not strictly comparable to 2020.
+    """
+    try:
+        rows = filter_rows(get_demographics(), year=year, jurisdiction=jurisdiction)
+    except SudorsError as e:
+        err.print(f"[red]Error from CDC SUDORS:[/red] {e}")
+        raise typer.Exit(1)
+    if dimension:
+        want = dimension.strip().lower()
+        rows = [r for r in rows if r.get("dimension") == want]
+        if not rows:
+            err.print("[yellow]Unknown --dimension.[/yellow] Use one of: sex, age, race_ethnicity.")
+            raise typer.Exit(1)
+    if limit:
+        rows = rows[:limit]
+    _sudors_render(rows, format, output)
+
+
+@sudors_app.command("months")
+def cmd_sudors_months(
+    drug: Annotated[Optional[str], typer.Option("--drug", help="Substring match on the drug class")] = None,
+    year: Annotated[Optional[int], typer.Option("--year", "-y")] = None,
+    jurisdiction: Annotated[Optional[str], typer.Option("--jurisdiction", "-j", help="State name, or 'Overall'")] = None,
+    limit: Annotated[Optional[int], typer.Option("--limit")] = None,
+    format: Annotated[str, typer.Option("-f", "--format")] = "table",
+    output: Annotated[Optional[Path], typer.Option("-o", "--output")] = None,
+):
+    """Monthly death counts by drug class — SUDORS' only sub-annual cut."""
+    try:
+        rows = filter_rows(get_deaths_by_month(), year=year, jurisdiction=jurisdiction)
+    except SudorsError as e:
+        err.print(f"[red]Error from CDC SUDORS:[/red] {e}")
+        raise typer.Exit(1)
+    if drug:
+        want = drug.strip().lower()
+        rows = [r for r in rows if want in (r.get("drug") or "").lower()]
+    if limit:
+        rows = rows[:limit]
+    _sudors_render(rows, format, output)
+
+
+@sudors_app.command("trend")
+def cmd_sudors_trend(
+    measure: Annotated[Optional[str], typer.Option("--measure", "-m", help="Substring match on the measure name, e.g. imfs_rate")] = None,
+    trend_range: Annotated[Optional[str], typer.Option("--range", "-r", help="e.g. '2020 to 2024'")] = None,
+    statistics: Annotated[
+        bool, typer.Option("--statistics", help="First-to-last-year change per jurisdiction instead of the year series")
+    ] = False,
+    scope: Annotated[
+        str, typer.Option("--scope", help="'chart' (jurisdictions in every year) or 'map' (first and last only), or 'all'")
+    ] = "chart",
+    jurisdiction: Annotated[Optional[str], typer.Option("--jurisdiction", "-j", help="Narrow to one jurisdiction")] = None,
+    limit: Annotated[Optional[int], typer.Option("--limit")] = None,
+    format: Annotated[str, typer.Option("-f", "--format")] = "table",
+    output: Annotated[Optional[Path], typer.Option("-o", "--output")] = None,
+):
+    """
+    The cross-year-comparable series — the only SUDORS table safe to plot over time.
+
+    The annual `Overall` row is a different set of jurisdictions every year
+    (34 in 2020, 43 in 2024), so plotting it charts coverage as much as mortality.
+    Each trend range here instead holds its jurisdictions fixed across every year
+    in it. `measure` joins against `pulse source sudors get data-dictionary`.
+
+    CDC publishes two aggregates per range. The default --scope chart is the
+    strict one behind the line and bar views; --scope map relaxes inclusion to the
+    first and last year (what the choropleths use) and so must not be plotted as a
+    series. --scope all returns both.
+    """
+    try:
+        rows = get_trend_statistics() if statistics else get_trend()
+    except SudorsError as e:
+        err.print(f"[red]Error from CDC SUDORS:[/red] {e}")
+        raise typer.Exit(1)
+
+    if scope != "all":
+        rows = [r for r in rows if r.get("scope") == scope]
+    if trend_range:
+        want = trend_range.strip().lower()
+        rows = [r for r in rows if want in (r.get("trend_range") or "").lower()]
+    if jurisdiction:
+        want = jurisdiction.strip().lower()
+        rows = [r for r in rows if want in (r.get("jurisdiction") or "").lower()]
+    if measure:
+        want = measure.strip().lower()
+        rows = [r for r in rows if want in (r.get("measure") or "").lower()]
+    if limit:
+        rows = rows[:limit]
+
+    if not rows:
+        err.print(
+            "[yellow]No rows matched.[/yellow] Ranges are '2020 to 2024', '2021 to 2024', "
+            "'2022 to 2024', '2023 to 2024'; measures look like alldrug_deaths, imfs_rate, xylazine_percent."
+        )
+        raise typer.Exit(1)
+    _print_rows(rows, format, output)
+
+
+@sudors_app.command("jurisdictions")
+def cmd_sudors_jurisdictions(
+    year: Annotated[Optional[int], typer.Option("--year", "-y", help="Only jurisdictions reporting that year")] = None,
+    json_out: Annotated[bool, typer.Option("--json")] = False,
+):
+    """
+    Which jurisdictions reported, for a year or across the whole release.
+
+    Inclusion requires reporting every overdose death that year and having
+    circumstance data on at least 75% of them, so the list changes annually.
+    """
+    try:
+        names = sudors_jurisdictions(year)
+    except SudorsError as e:
+        err.print(f"[red]Error from CDC SUDORS:[/red] {e}")
+        raise typer.Exit(1)
+
+    if json_out:
+        print(json.dumps(names, indent=2))
+        return
+
+    label = f"reporting in {year}" if year else "in the release"
+    console.print(f"\n[bold]{len(names)} jurisdictions[/bold] {label} [dim](includes the combined 'Overall' row)[/dim]\n")
+    for name in names:
+        console.print(f"  • {name}")
+    console.print()
+
+
+@sudors_app.command("get")
+def cmd_sudors_get(
+    key: Annotated[str, typer.Argument(help="Registry key — see `pulse source sudors list`")],
+    year: Annotated[Optional[int], typer.Option("--year", "-y")] = None,
+    jurisdiction: Annotated[Optional[str], typer.Option("--jurisdiction", "-j")] = None,
+    limit: Annotated[Optional[int], typer.Option("--limit")] = None,
+    format: Annotated[str, typer.Option("-f", "--format")] = "table",
+    output: Annotated[Optional[Path], typer.Option("-o", "--output")] = None,
+):
+    """Pull any registered slice by key, including the ones without a shortcut command."""
+    loader = SUDORS_LOADERS.get(key)
+    if loader is None:
+        err.print(f"[red]Unknown slice:[/red] {key}")
+        err.print(f"[dim]Available: {', '.join(SUDORS_LOADERS)}[/dim]")
+        raise typer.Exit(1)
+    ds = sudors_dataset(key)
+    if ds:
+        err.print(f"[bold]{ds.name}[/bold]  [dim]({ds.grain})[/dim]")
+    _sudors_rows(loader, year, jurisdiction, limit, format, output)
+
+
+@sudors_app.command("release")
+def cmd_sudors_release(
+    json_out: Annotated[bool, typer.Option("--json")] = False,
+):
+    """Which release this is: the data-entry cutoff and the newest final data year."""
+    try:
+        info = get_release()
+    except SudorsError as e:
+        err.print(f"[red]Error from CDC SUDORS:[/red] {e}")
+        raise typer.Exit(1)
+
+    if json_out:
+        print(json.dumps(info, indent=2))
+        return
+
+    console.print(
+        Panel(
+            f"[bold]Data-entry cutoff:[/bold] {info['data_entry_cutoff']}\n"
+            f"[bold]Newest final data year:[/bold] {info['latest_data_year']}\n"
+            f"[bold]Deaths in decedent's own jurisdiction:[/bold] {info['pct_deaths_in_residence_jurisdiction']}\n"
+            f"[bold]IMF deaths toxicology-confirmed:[/bold] {info['pct_imf_deaths_toxicology_confirmed']}\n\n"
+            f"[dim]Anything entered after the cutoff is not in this release, so a jurisdiction's own\n"
+            f"dashboard may report more recent numbers. SUDORS restates annually.[/dim]\n\n"
+            f"[dim]Dashboard: {SUDORS_DASHBOARD_URL}\n"
+            f"About:     {SUDORS_ABOUT_URL}\n"
+            f"Coding manual: {SUDORS_CODING_MANUAL_URL}[/dim]",
+            title="SUDORS release",
+            border_style="cyan",
+            box=box.ROUNDED,
+        )
+    )
 
 
 # ── wisqars ───────────────────────────────────────────────────────────────────
