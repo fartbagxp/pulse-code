@@ -12,7 +12,7 @@ import json
 
 from typer.testing import CliRunner
 
-import pulse.cli as cli
+from pulse import cli
 from pulse.cli import app
 
 runner = CliRunner()
@@ -49,7 +49,9 @@ def test_seer_mortality_calls_sdk_and_prints_json(monkeypatch):
 
     monkeypatch.setattr(cli, "get_mortality_trend", fake_get_mortality_trend)
 
-    result = runner.invoke(app, ["source", "seer", "mortality", "--site", "55", "-f", "json"])
+    result = runner.invoke(
+        app, ["source", "seer", "mortality", "--site", "55", "-f", "json"]
+    )
     assert result.exit_code == 0
     assert captured["site"] == 55
     data = json.loads(result.stdout)
@@ -80,7 +82,9 @@ def test_cdc_open_query_resolves_registry_key_and_prints_json(monkeypatch):
 
     monkeypatch.setattr(cli.SodaClient, "get", fake_get)
 
-    result = runner.invoke(app, ["source", "cdc-open", "query", "leading_death", "-f", "json"])
+    result = runner.invoke(
+        app, ["source", "cdc-open", "query", "leading_death", "-f", "json"]
+    )
     assert result.exit_code == 0
     assert captured["dataset_id"] == "bi63-dtpu"
     data = json.loads(result.stdout)
@@ -96,6 +100,8 @@ def test_cdc_open_query_passes_through_unknown_id_verbatim(monkeypatch):
 
     monkeypatch.setattr(cli.SodaClient, "get", fake_get)
 
-    result = runner.invoke(app, ["source", "cdc-open", "query", "some-raw-id", "-f", "json"])
+    result = runner.invoke(
+        app, ["source", "cdc-open", "query", "some-raw-id", "-f", "json"]
+    )
     assert result.exit_code == 0
     assert captured["dataset_id"] == "some-raw-id"

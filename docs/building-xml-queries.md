@@ -51,10 +51,11 @@ To fix it, find all `input_radio` elements in the dataset's `query_params` JSON 
 
 ```python
 import json
-f = json.load(open('query_params_D133.json'))
-for i in f['parameters']['inputs']:
-    if i['type'] == 'input_radio':
-        print(i['name'], i['value'], i.get('label'))
+
+f = json.load(open("query_params_D133.json"))
+for i in f["parameters"]["inputs"]:
+    if i["type"] == "input_radio":
+        print(i["name"], i["value"], i.get("label"))
 ```
 
 Use the first `value` for each `name` group as the default. Common ones:

@@ -8,7 +8,11 @@ from pulse.cdc_open_catalog import dataset, datasets, search
 def test_loads_all_bundled_datasets():
     ds = datasets()
     assert len(ds) >= 60
-    assert {d.key for d in ds} >= {"leading_death", "life_expectancy", "mortality_rates"}
+    assert {d.key for d in ds} >= {
+        "leading_death",
+        "life_expectancy",
+        "mortality_rates",
+    }
 
 
 def test_dataset_lookup_by_key():

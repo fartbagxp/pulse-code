@@ -36,17 +36,18 @@ Examples
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Any, Iterator
+from collections.abc import Iterator
+from typing import Any
 
 import requests
 
 from pulse.nis_catalog import (
     FIPS_TO_STATE,
-    NISYear,
     STATE_TO_FIPS,
     SURVEY_COLS,
     SURVEY_VAX_COLS,
     SURVEY_YEARS,
+    NISYear,
 )
 from pulse.nis_parser import parse_r_columns, parse_sas_columns, stream_dat
 
@@ -192,7 +193,14 @@ def get_vaccination_rates(
     weight_col = "PROVWT_D" if survey == "child" else "PROVWT_C"
     geo_col = "STATE" if survey == "teen" else "RETEILI"
 
-    wanted = vax_cols | {"SHOT_HES", "NOT_SURE_VACC", weight_col, geo_col, "STATE", "RETEILI"}
+    wanted = vax_cols | {
+        "SHOT_HES",
+        "NOT_SURE_VACC",
+        weight_col,
+        geo_col,
+        "STATE",
+        "RETEILI",
+    }
     records = list(stream_records(survey, year, state=state, columns=wanted))
 
     # Accumulate by state FIPS
@@ -225,7 +233,9 @@ def get_vaccination_rates(
             h = rec.get("SHOT_HES") or rec.get("NOT_SURE_VACC") or ""
             if h in ("0", "1"):
                 hesi_vals.append(int(h))
-        row["hesitancy_pct"] = round(100 * sum(hesi_vals) / len(hesi_vals), 1) if hesi_vals else None
+        row["hesitancy_pct"] = (
+            round(100 * sum(hesi_vals) / len(hesi_vals), 1) if hesi_vals else None
+        )
         row["hesitancy_n"] = sum(hesi_vals)
 
         rows.append(row)
@@ -265,8 +275,12 @@ def get_national_rates(
         national[f"{col}_denominator"] = total_d
 
     total_hesi_n = sum(r.get("hesitancy_n") or 0 for r in state_rows)
-    total_hesi_d = sum(r["n_respondents"] for r in state_rows if r.get("hesitancy_pct") is not None)
-    national["hesitancy_pct"] = round(100 * total_hesi_n / total_hesi_d, 1) if total_hesi_d else None
+    total_hesi_d = sum(
+        r["n_respondents"] for r in state_rows if r.get("hesitancy_pct") is not None
+    )
+    national["hesitancy_pct"] = (
+        round(100 * total_hesi_n / total_hesi_d, 1) if total_hesi_d else None
+    )
     national["hesitancy_n"] = total_hesi_n
 
     return national

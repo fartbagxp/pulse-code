@@ -23,9 +23,14 @@ import re
 from collections import Counter, defaultdict
 from typing import Any
 
-from pulse.grasp_client import clear_cache as _clear_cache
-from pulse.grasp_client import fetch, fluview_clinical_fetch, fluview_fetch, flusurv_fetch
 from pulse.grasp_catalog import DATASETS, FLUSURV_LOCATIONS, STATE_FIPS
+from pulse.grasp_client import clear_cache as _clear_cache
+from pulse.grasp_client import (
+    fetch,
+    flusurv_fetch,
+    fluview_clinical_fetch,
+    fluview_fetch,
+)
 
 # Full epiweek ranges covering all available data
 _FLUSURV_ALL_EPIWEEKS = "200940-202660"
@@ -79,7 +84,9 @@ def get_hantavirus_cases(
         records = [r for r in records if r.get("StateFIPS") in matched_fips]
 
     if outcome:
-        records = [r for r in records if r.get("Outcome", "").lower() == outcome.lower()]
+        records = [
+            r for r in records if r.get("Outcome", "").lower() == outcome.lower()
+        ]
 
     if year is not None:
         year_str = str(year)
@@ -176,7 +183,9 @@ def summarize_fluview_ili_by_region(
               Defaults to the full historical record.
     Returns [{region, peak_wili, avg_wili, weeks}] sorted by peak_wili desc.
     """
-    all_regions = ["nat"] + [f"hhs{i}" for i in range(1, 11)] + [f"cen{i}" for i in range(1, 10)]
+    all_regions = (
+        ["nat"] + [f"hhs{i}" for i in range(1, 11)] + [f"cen{i}" for i in range(1, 10)]
+    )
     records = fluview_fetch(all_regions, epiweeks or _FLUVIEW_ALL_EPIWEEKS)
 
     by_region: dict[str, list[float]] = defaultdict(list)
@@ -222,7 +231,9 @@ def get_fluview_clinical(
         percent_b         — % positive for flu B
     """
     regions = _normalize_regions(regions, "nat")
-    records = fluview_clinical_fetch(regions, epiweeks or _FLUVIEW_CLINICAL_ALL_EPIWEEKS)
+    records = fluview_clinical_fetch(
+        regions, epiweeks or _FLUVIEW_CLINICAL_ALL_EPIWEEKS
+    )
     return sorted(records, key=lambda r: (r.get("region", ""), r.get("epiweek", 0)))
 
 

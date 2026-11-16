@@ -13,7 +13,6 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 _CATALOG_PATH = Path(__file__).parent / "data" / "cdc_open_catalog.json"
 
@@ -53,7 +52,7 @@ def datasets() -> list[CdcOpenDataset]:
     return list(_load().values())
 
 
-def dataset(key_or_id: str) -> Optional[CdcOpenDataset]:
+def dataset(key_or_id: str) -> CdcOpenDataset | None:
     """Look up by registry key (e.g. 'leading_death') or Socrata ID (e.g. 'bi63-dtpu')."""
     by_key = _load()
     if key_or_id in by_key:

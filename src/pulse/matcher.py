@@ -124,7 +124,7 @@ class QueryMatch:
     score: float
 
 
-def _year_coverage_bonus(prompt: str, ds: "Dataset") -> float:
+def _year_coverage_bonus(prompt: str, ds: Dataset) -> float:
     """Boost score if the dataset's year range covers years mentioned in the prompt."""
     import re as _re
 

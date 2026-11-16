@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 _DATA_DIR = Path(__file__).parent / "data"
 
@@ -23,7 +22,7 @@ class Dataset:
     topic: str
     subject: str
     year_start: int
-    year_end: Optional[int]
+    year_end: int | None
     year_range_label: str
     tags: list[str]
     measures: list[Measure]
@@ -83,7 +82,7 @@ class Catalog:
     def datasets(self) -> list[Dataset]:
         return list(self._datasets.values())
 
-    def dataset(self, dataset_id: str) -> Optional[Dataset]:
+    def dataset(self, dataset_id: str) -> Dataset | None:
         return self._datasets.get(dataset_id.upper())
 
     def queries(self) -> list[BundledQuery]:

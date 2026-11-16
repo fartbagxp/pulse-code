@@ -64,5 +64,7 @@ def test_stream_dat_yields_one_dict_per_line(monkeypatch):
 
     monkeypatch.setattr("pulse.nis_parser.requests.get", fake_get)
 
-    rows = list(stream_dat("http://example.com/fake.dat", {"YEAR": (0, 4), "STATE": (4, 6)}))
+    rows = list(
+        stream_dat("http://example.com/fake.dat", {"YEAR": (0, 4), "STATE": (4, 6)})
+    )
     assert rows == [{"YEAR": "2022", "STATE": "CA"}, {"YEAR": "2021", "STATE": "TX"}]

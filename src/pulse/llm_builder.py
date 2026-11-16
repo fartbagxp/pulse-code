@@ -7,10 +7,10 @@ import os
 import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import NamedTuple, Optional
+from typing import NamedTuple
 
 import anthropic
-import httpx
+import httpx2
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
@@ -20,11 +20,11 @@ _TEMPLATES_DIR = Path(__file__).parent / "templates"
 _QUERIES_DIR = Path(__file__).parent / "queries"
 _QUERIES_INDEX_PATH = Path(__file__).parent / "data" / "queries_index.json"
 
-_dataset_query_index: Optional[dict[str, str]] = None
+_dataset_query_index: dict[str, str] | None = None
 
 
-def _build_http_client() -> Optional[httpx.Client]:
-    """Build an httpx.Client routed through LLM_HTTP_PROXY, if set.
+def _build_http_client() -> httpx2.Client | None:
+    """Build an httpx2.Client routed through LLM_HTTP_PROXY, if set.
 
     Supports socks5h:// (DNS resolved remotely, through the proxy) as well
     as http(s):// proxy URLs — useful when the LLM endpoint isn't directly
@@ -33,7 +33,7 @@ def _build_http_client() -> Optional[httpx.Client]:
     proxy = os.getenv("LLM_HTTP_PROXY")
     if not proxy:
         return None
-    return httpx.Client(proxy=proxy)
+    return httpx2.Client(proxy=proxy)
 
 
 # Age variables — AAR is incompatible when grouping by these
@@ -364,8 +364,8 @@ class WonderRequestSet(BaseModel):
 
 def _build_user_content(
     prompt: str,
-    base_xml: Optional[str],
-    reference_queries: Optional[list[tuple[str, str]]],
+    base_xml: str | None,
+    reference_queries: list[tuple[str, str]] | None,
 ) -> str:
     parts = []
     if reference_queries:
@@ -387,7 +387,7 @@ def _build_user_content(
     return "\n\n".join(parts)
 
 
-def _bundled_query_for_dataset(dataset_id: str) -> Optional[str]:
+def _bundled_query_for_dataset(dataset_id: str) -> str | None:
     """First bundled example query for a dataset, used as a merge target
     when the dataset has no `{id}-base.xml` template (e.g. D202, D133,
     D150 — see docs/building-xml-queries.md). Without something to merge
@@ -408,7 +408,7 @@ def _bundled_query_for_dataset(dataset_id: str) -> Optional[str]:
     return path.read_text() if path.exists() else None
 
 
-def _load_template(dataset_id: str) -> Optional[str]:
+def _load_template(dataset_id: str) -> str | None:
     path = _TEMPLATES_DIR / f"{dataset_id}-base.xml"
     if path.exists():
         return path.read_text()
@@ -471,8 +471,8 @@ def _apply_constraints(overrides: list[WonderParam]) -> list[WonderParam]:
 class ModelTurn(NamedTuple):
     """A normalized model response, independent of LLM provider."""
 
-    tool_name: Optional[str]
-    tool_input: Optional[dict]
+    tool_name: str | None
+    tool_input: dict | None
     text: str
     stop_reason: str
 
@@ -493,10 +493,10 @@ class _BaseQueryBuilder:
     def build(
         self,
         prompt: str,
-        base_xml: Optional[str] = None,
-        reference_queries: Optional[list[tuple[str, str]]] = None,
+        base_xml: str | None = None,
+        reference_queries: list[tuple[str, str]] | None = None,
         max_tokens: int = 4096,
-        on_thinking: Optional[callable] = None,
+        on_thinking: callable | None = None,
     ) -> WonderRequest:
         """
         Build a WONDER query from natural language.
@@ -541,9 +541,9 @@ class _BaseQueryBuilder:
     def build_any(
         self,
         prompt: str,
-        reference_queries: Optional[list[tuple[str, str]]] = None,
+        reference_queries: list[tuple[str, str]] | None = None,
         max_tokens: int = 4096,
-        on_thinking: Optional[callable] = None,
+        on_thinking: callable | None = None,
     ) -> WonderRequest | WonderRequestSet:
         """
         Build a WONDER query or, when the request compares multiple causes/
@@ -604,7 +604,7 @@ class LLMQueryBuilder(_BaseQueryBuilder):
     """Build or refine CDC WONDER queries using Claude as the reasoning engine."""
 
     def __init__(
-        self, api_key: Optional[str] = None, model: str = "claude-sonnet-4-6"
+        self, api_key: str | None = None, model: str = "claude-sonnet-4-6"
     ) -> None:
         self.client = anthropic.Anthropic(
             api_key=api_key or os.getenv("ANTHROPIC_API_KEY"),
@@ -638,10 +638,10 @@ class AzureOpenAIQueryBuilder(_BaseQueryBuilder):
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
-        endpoint: Optional[str] = None,
-        deployment: Optional[str] = None,
-        api_version: Optional[str] = None,
+        api_key: str | None = None,
+        endpoint: str | None = None,
+        deployment: str | None = None,
+        api_version: str | None = None,
     ) -> None:
         import openai
 
@@ -716,7 +716,7 @@ class AzureOpenAIQueryBuilder(_BaseQueryBuilder):
         return ModelTurn(None, None, message.content or "", stop_reason)
 
 
-def get_query_builder(provider: Optional[str] = None) -> _BaseQueryBuilder:
+def get_query_builder(provider: str | None = None) -> _BaseQueryBuilder:
     """Return an LLM query builder for the configured provider.
 
     Selected via the `provider` argument, falling back to the

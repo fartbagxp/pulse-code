@@ -60,7 +60,7 @@ def test_live_provider_builds_a_real_query():
 
     try:
         request = builder.build("TB cases by year")
-    except Exception as exc:  # noqa: BLE001 — deliberately broad: network/
+    except Exception as exc:
         # permission failures here are an environment gap (e.g. missing
         # LLM_HTTP_PROXY for a private-endpoint-only Azure resource), not a
         # code defect worth failing CI over. Anything else re-raises as a

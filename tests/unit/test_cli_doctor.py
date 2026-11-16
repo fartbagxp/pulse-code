@@ -8,14 +8,18 @@ from __future__ import annotations
 
 from typer.testing import CliRunner
 
-import pulse.cli as cli
+from pulse import cli
 from pulse.cli import app
 
 runner = CliRunner()
 
 
 def test_doctor_all_reachable_exits_zero(monkeypatch):
-    monkeypatch.setattr(cli, "_check_url", lambda url, timeout=8.0, user_agent="pulse-doctor": (True, "HTTP 200  10ms"))
+    monkeypatch.setattr(
+        cli,
+        "_check_url",
+        lambda url, timeout=8.0, user_agent="pulse-doctor": (True, "HTTP 200  10ms"),
+    )
     result = runner.invoke(app, ["doctor"])
     assert result.exit_code == 0
     assert "All sources reachable" in result.stdout
@@ -34,7 +38,11 @@ def test_doctor_unreachable_source_exits_nonzero(monkeypatch):
 
 
 def test_doctor_reports_missing_anthropic_key(monkeypatch):
-    monkeypatch.setattr(cli, "_check_url", lambda url, timeout=8.0, user_agent="pulse-doctor": (True, "HTTP 200  10ms"))
+    monkeypatch.setattr(
+        cli,
+        "_check_url",
+        lambda url, timeout=8.0, user_agent="pulse-doctor": (True, "HTTP 200  10ms"),
+    )
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.delenv("LLM_PROVIDER", raising=False)
     result = runner.invoke(app, ["doctor"])
@@ -43,7 +51,11 @@ def test_doctor_reports_missing_anthropic_key(monkeypatch):
 
 
 def test_doctor_reports_set_anthropic_key(monkeypatch):
-    monkeypatch.setattr(cli, "_check_url", lambda url, timeout=8.0, user_agent="pulse-doctor": (True, "HTTP 200  10ms"))
+    monkeypatch.setattr(
+        cli,
+        "_check_url",
+        lambda url, timeout=8.0, user_agent="pulse-doctor": (True, "HTTP 200  10ms"),
+    )
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-test")
     monkeypatch.delenv("LLM_PROVIDER", raising=False)
     result = runner.invoke(app, ["doctor"])
