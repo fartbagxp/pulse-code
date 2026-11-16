@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pulse.nssp_client import DelphiClient, GEO_TYPES, SIGNALS, _current_epiweek
+from pulse.nssp_client import GEO_TYPES, SIGNALS, DelphiClient, _current_epiweek
 
 _client: DelphiClient | None = None
 
@@ -105,7 +105,13 @@ def get_state_snapshot(
     pathogen: 'covid', 'influenza', 'rsv', 'combined'
     week: epiweek 'YYYYWW', e.g. '202501'. Omit for most recent.
     """
-    return get_ed_visits(pathogen=pathogen, geo_type="state", geo_value="*", start_date=week, end_date=week)
+    return get_ed_visits(
+        pathogen=pathogen,
+        geo_type="state",
+        geo_value="*",
+        start_date=week,
+        end_date=week,
+    )
 
 
 def get_hhs_region_trends(
@@ -122,7 +128,11 @@ def get_hhs_region_trends(
     """
     geo_value = str(region) if region is not None else "*"
     return get_ed_visits(
-        pathogen=pathogen, geo_type="hhs", geo_value=geo_value, start_date=start_date, end_date=end_date
+        pathogen=pathogen,
+        geo_type="hhs",
+        geo_value=geo_value,
+        start_date=start_date,
+        end_date=end_date,
     )
 
 

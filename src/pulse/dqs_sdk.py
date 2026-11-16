@@ -12,9 +12,10 @@ disk. Values come back as strings exactly as Socrata returns them.
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
-from pulse.dqs_catalog import DqsDataset, dataset as _lookup
+from pulse.dqs_catalog import DqsDataset
+from pulse.dqs_catalog import dataset as _lookup
 from pulse.soda_client import SodaClient
 
 # The columns every DQS table shares — handy default projection for trends.
@@ -35,7 +36,7 @@ CORE_COLUMNS = [
 ]
 
 
-def resolve(key_or_id: str) -> tuple[str, Optional[DqsDataset]]:
+def resolve(key_or_id: str) -> tuple[str, DqsDataset | None]:
     """Resolve a registry key or Socrata ID to (socrata_id, dataset-or-None)."""
     ds = _lookup(key_or_id)
     return (ds.id if ds else key_or_id), ds
@@ -43,12 +44,12 @@ def resolve(key_or_id: str) -> tuple[str, Optional[DqsDataset]]:
 
 def query(
     key_or_id: str,
-    where: Optional[str] = None,
-    select: Optional[str] = None,
-    group: Optional[str] = None,
-    order: Optional[str] = None,
+    where: str | None = None,
+    select: str | None = None,
+    group: str | None = None,
+    order: str | None = None,
     limit: int = 1000,
-    client: Optional[SodaClient] = None,
+    client: SodaClient | None = None,
 ) -> list[dict[str, Any]]:
     """Run a raw SODA query against a DQS dataset (by key or Socrata ID)."""
     socrata_id, _ = resolve(key_or_id)
@@ -65,9 +66,9 @@ def query(
 
 def trend(
     key_or_id: str,
-    estimate_type: Optional[str] = None,
+    estimate_type: str | None = None,
     limit: int = 1000,
-    client: Optional[SodaClient] = None,
+    client: SodaClient | None = None,
 ) -> list[dict[str, Any]]:
     """
     All-persons national trend for a DQS dataset, oldest→newest.
@@ -90,7 +91,7 @@ def trend(
     )
 
 
-def estimate_types(key_or_id: str, client: Optional[SodaClient] = None) -> list[str]:
+def estimate_types(key_or_id: str, client: SodaClient | None = None) -> list[str]:
     """Distinct estimate_type values published by a dataset (the measures it offers)."""
     rows = query(
         key_or_id,

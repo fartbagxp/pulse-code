@@ -4,7 +4,7 @@ constructor would normally reach out, we stop short of the actual request."""
 
 from __future__ import annotations
 
-import httpcore
+import httpcore2
 import pytest
 
 from pulse.llm_builder import (
@@ -20,7 +20,6 @@ from pulse.llm_builder import (
     _parse_xml_params,
     get_query_builder,
 )
-
 
 # ── WonderRequest / XML round-trip ──────────────────────────────────────
 
@@ -222,7 +221,7 @@ def test_build_http_client_returns_none_without_proxy_env_var(monkeypatch):
 
 
 def test_build_http_client_wires_socks5h_proxy(monkeypatch):
-    """Confirms the proxy URL actually results in an httpcore.SOCKSProxy
+    """Confirms the proxy URL actually results in an httpcore2.SOCKSProxy
     transport — not a silent no-op — without needing a real reachable
     proxy (the client is constructed but never asked to connect)."""
     monkeypatch.setenv("LLM_HTTP_PROXY", "socks5h://127.0.0.1:1080")
@@ -231,7 +230,7 @@ def test_build_http_client_wires_socks5h_proxy(monkeypatch):
     mounts = client._mounts
     assert len(mounts) == 1
     transport = next(iter(mounts.values()))
-    assert isinstance(transport._pool, httpcore.SOCKSProxy)
+    assert isinstance(transport._pool, httpcore2.SOCKSProxy)
     client.close()
 
 
@@ -239,5 +238,5 @@ def test_build_http_client_wires_http_proxy(monkeypatch):
     monkeypatch.setenv("LLM_HTTP_PROXY", "http://127.0.0.1:8080")
     client = _build_http_client()
     transport = next(iter(client._mounts.values()))
-    assert isinstance(transport._pool, httpcore.HTTPProxy)
+    assert isinstance(transport._pool, httpcore2.HTTPProxy)
     client.close()

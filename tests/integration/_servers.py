@@ -113,7 +113,7 @@ class MockLLMServer:
         mock = self
 
         class Handler(http.server.BaseHTTPRequestHandler):
-            def do_POST(self) -> None:  # noqa: N802
+            def do_POST(self) -> None:
                 mock.request_count += 1
                 length = int(self.headers.get("Content-Length", 0))
                 self.rfile.read(length)

@@ -13,7 +13,9 @@ runner = CliRunner()
 
 def test_generate_produces_syntactically_valid_python(tmp_path):
     out = tmp_path / "fetch_generated.py"
-    result = runner.invoke(app, ["generate", "drug-deaths-by-year-2018-2024-req.xml", "-o", str(out)])
+    result = runner.invoke(
+        app, ["generate", "drug-deaths-by-year-2018-2024-req.xml", "-o", str(out)]
+    )
     assert result.exit_code == 0
     assert out.exists()
     ast.parse(out.read_text())  # raises SyntaxError if malformed
@@ -21,7 +23,9 @@ def test_generate_produces_syntactically_valid_python(tmp_path):
 
 def test_generate_docstring_closes_properly(tmp_path):
     out = tmp_path / "fetch_generated.py"
-    runner.invoke(app, ["generate", "drug-deaths-by-year-2018-2024-req.xml", "-o", str(out)])
+    runner.invoke(
+        app, ["generate", "drug-deaths-by-year-2018-2024-req.xml", "-o", str(out)]
+    )
     tree = ast.parse(out.read_text())
     docstring = ast.get_docstring(tree)
     assert docstring is not None
@@ -30,7 +34,9 @@ def test_generate_docstring_closes_properly(tmp_path):
 
 def test_generate_project_root_points_at_health_repo_root(tmp_path):
     out = tmp_path / "fetch_generated.py"
-    runner.invoke(app, ["generate", "drug-deaths-by-year-2018-2024-req.xml", "-o", str(out)])
+    runner.invoke(
+        app, ["generate", "drug-deaths-by-year-2018-2024-req.xml", "-o", str(out)]
+    )
     text = out.read_text()
     # This script is meant to live at src/wonder/queries/<file>.py inside the
     # health repo — parents[3] from there is the repo root (queries -> wonder
@@ -40,7 +46,9 @@ def test_generate_project_root_points_at_health_repo_root(tmp_path):
 
 def test_generate_uses_header_array_pairing_not_dicts(tmp_path):
     out = tmp_path / "fetch_generated.py"
-    runner.invoke(app, ["generate", "drug-deaths-by-year-2018-2024-req.xml", "-o", str(out)])
+    runner.invoke(
+        app, ["generate", "drug-deaths-by-year-2018-2024-req.xml", "-o", str(out)]
+    )
     text = out.read_text()
     assert "get_column_headers" in text
     assert "parse_response_to_arrays" in text
@@ -49,7 +57,9 @@ def test_generate_uses_header_array_pairing_not_dicts(tmp_path):
 
 def test_generate_embeds_correct_dataset_id(tmp_path):
     out = tmp_path / "fetch_generated.py"
-    runner.invoke(app, ["generate", "drug-deaths-by-year-2018-2024-req.xml", "-o", str(out)])
+    runner.invoke(
+        app, ["generate", "drug-deaths-by-year-2018-2024-req.xml", "-o", str(out)]
+    )
     assert 'DATASET_ID = "D176"' in out.read_text()
 
 

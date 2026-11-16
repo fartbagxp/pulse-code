@@ -10,7 +10,7 @@ import json
 
 from typer.testing import CliRunner
 
-import pulse.cli as cli
+from pulse import cli
 from pulse.cli import app
 
 runner = CliRunner()
@@ -39,7 +39,18 @@ def test_wisqars_mortality_calls_sdk_and_prints_json(monkeypatch):
     monkeypatch.setattr(cli, "get_injury_mortality", fake_get_injury_mortality)
 
     result = runner.invoke(
-        app, ["source", "wisqars", "mortality", "--intent", "Suicide", "--mechanism", "Firearm", "-f", "json"]
+        app,
+        [
+            "source",
+            "wisqars",
+            "mortality",
+            "--intent",
+            "Suicide",
+            "--mechanism",
+            "Firearm",
+            "-f",
+            "json",
+        ],
     )
     assert result.exit_code == 0
     assert captured["intent"] == "Suicide"
@@ -56,7 +67,9 @@ def test_wisqars_state_calls_sdk(monkeypatch):
 
     monkeypatch.setattr(cli, "get_injury_state", fake_get_injury_state)
 
-    result = runner.invoke(app, ["source", "wisqars", "state", "--state", "California", "-f", "json"])
+    result = runner.invoke(
+        app, ["source", "wisqars", "state", "--state", "California", "-f", "json"]
+    )
     assert result.exit_code == 0
     assert captured["state"] == "California"
 
@@ -70,6 +83,8 @@ def test_wisqars_query_resolves_registry_key(monkeypatch):
 
     monkeypatch.setattr(cli, "wisqars_query_dataset", fake_query_dataset)
 
-    result = runner.invoke(app, ["source", "wisqars", "query", "injury_mortality", "-f", "json"])
+    result = runner.invoke(
+        app, ["source", "wisqars", "query", "injury_mortality", "-f", "json"]
+    )
     assert result.exit_code == 0
     assert captured["dataset_id"] == "nt65-c7a7"

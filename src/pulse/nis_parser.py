@@ -14,7 +14,7 @@ All parsing is streaming; the DAT file is never written to disk.
 from __future__ import annotations
 
 import re
-from typing import Iterator
+from collections.abc import Iterator
 
 import requests
 
@@ -144,4 +144,7 @@ def stream_dat(
 
 
 def _extract(line: str, active: dict[str, tuple[int, int]]) -> dict[str, str]:
-    return {name: line[s:e].strip() if e <= len(line) else "" for name, (s, e) in active.items()}
+    return {
+        name: line[s:e].strip() if e <= len(line) else ""
+        for name, (s, e) in active.items()
+    }

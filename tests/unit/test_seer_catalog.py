@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
-from pulse.seer_catalog import AGE_RANGE, RACE, cancer_sites, find_site, variable_formats
+from pulse.seer_catalog import (
+    AGE_RANGE,
+    RACE,
+    cancer_sites,
+    find_site,
+    variable_formats,
+)
 
 
 def test_loads_variable_formats():

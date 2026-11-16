@@ -51,7 +51,15 @@ DATASETS: dict[str, Dataset] = {
             "and drug overdose. Source: WISQARS / NCHS."
         ),
         years="2019–present",
-        key_columns=["geoid", "intent", "period", "type", "count", "rate", "data_as_of"],
+        key_columns=[
+            "geoid",
+            "intent",
+            "period",
+            "type",
+            "count",
+            "rate",
+            "data_as_of",
+        ],
     ),
     "injury_state": Dataset(
         id="fpsi-y8tj",
@@ -61,7 +69,15 @@ DATASETS: dict[str, Dataset] = {
             "firearm suicide, all homicide, all suicide, and drug overdose. Source: WISQARS / NCHS."
         ),
         years="2019–present",
-        key_columns=["geoid", "name", "intent", "period", "count_sup", "rate", "data_as_of"],
+        key_columns=[
+            "geoid",
+            "name",
+            "intent",
+            "period",
+            "count_sup",
+            "rate",
+            "data_as_of",
+        ],
     ),
     "injury_county": Dataset(
         id="psx4-wq38",

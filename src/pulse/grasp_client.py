@@ -64,7 +64,9 @@ def _delphi_get(
     body = resp.json()
 
     if body.get("result") not in (1, 2):
-        raise ValueError(f"Delphi {endpoint} API error: {body.get('message', 'unknown')}")
+        raise ValueError(
+            f"Delphi {endpoint} API error: {body.get('message', 'unknown')}"
+        )
 
     data = body.get("epidata", [])
     _CACHE[cache_key] = (now, data)
@@ -81,7 +83,9 @@ def flusurv_fetch(locations: list[str], epiweeks: str) -> list[dict[str, Any]]:
     location, season, epiweek, issue, lag, rate_overall, rate_age_0..7,
     rate_race_*, rate_sex_*, rate_flu_a, rate_flu_b
     """
-    cache_key = f"flusurv:{','.join(sorted(loc.lower() for loc in locations))}:{epiweeks}"
+    cache_key = (
+        f"flusurv:{','.join(sorted(loc.lower() for loc in locations))}:{epiweeks}"
+    )
     return _delphi_get(
         "flusurv", {"locations": ",".join(locations), "epiweeks": epiweeks}, cache_key
     )
@@ -114,9 +118,13 @@ def fluview_clinical_fetch(regions: list[str], epiweeks: str) -> list[dict[str, 
     region, epiweek, total_specimens, total_a, total_b,
     percent_positive, percent_a, percent_b
     """
-    cache_key = f"fluview_clinical:{','.join(sorted(r.lower() for r in regions))}:{epiweeks}"
+    cache_key = (
+        f"fluview_clinical:{','.join(sorted(r.lower() for r in regions))}:{epiweeks}"
+    )
     return _delphi_get(
-        "fluview_clinical", {"regions": ",".join(regions), "epiweeks": epiweeks}, cache_key
+        "fluview_clinical",
+        {"regions": ",".join(regions), "epiweeks": epiweeks},
+        cache_key,
     )
 
 

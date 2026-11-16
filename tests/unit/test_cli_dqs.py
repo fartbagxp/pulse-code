@@ -11,7 +11,7 @@ import json
 
 from typer.testing import CliRunner
 
-import pulse.cli as cli
+from pulse import cli
 from pulse.cli import app
 from pulse.dqs_catalog import dataset, datasets, search, topics
 
@@ -67,7 +67,9 @@ def test_dqs_list_json_is_valid_and_complete():
 
 
 def test_dqs_list_topic_filter():
-    result = runner.invoke(app, ["source", "dqs", "list", "--topic", "Chronic Disease", "--json"])
+    result = runner.invoke(
+        app, ["source", "dqs", "list", "--topic", "Chronic Disease", "--json"]
+    )
     assert result.exit_code == 0
     data = json.loads(result.stdout)
     keys = {d["key"] for d in data}
@@ -75,7 +77,9 @@ def test_dqs_list_topic_filter():
 
 
 def test_dqs_list_search_filter():
-    result = runner.invoke(app, ["source", "dqs", "list", "--search", "spending", "--json"])
+    result = runner.invoke(
+        app, ["source", "dqs", "list", "--search", "spending", "--json"]
+    )
     assert result.exit_code == 0
     data = json.loads(result.stdout)
     keys = {d["key"] for d in data}
@@ -97,7 +101,16 @@ def test_dqs_query_calls_sdk_with_resolved_key(monkeypatch):
 
     result = runner.invoke(
         app,
-        ["source", "dqs", "query", "drug-overdose-deaths", "--where", "classification='Total'", "-f", "json"],
+        [
+            "source",
+            "dqs",
+            "query",
+            "drug-overdose-deaths",
+            "--where",
+            "classification='Total'",
+            "-f",
+            "json",
+        ],
     )
     assert result.exit_code == 0
     assert captured["key"] == "drug-overdose-deaths"
@@ -107,11 +120,16 @@ def test_dqs_query_calls_sdk_with_resolved_key(monkeypatch):
 
 def test_dqs_trend_calls_sdk_and_prints(monkeypatch):
     def fake_trend(key_or_id, estimate_type=None, limit=1000):
-        return [{"time_period": "2018", "estimate": "20.7"}, {"time_period": "2024", "estimate": "23.3"}]
+        return [
+            {"time_period": "2018", "estimate": "20.7"},
+            {"time_period": "2024", "estimate": "23.3"},
+        ]
 
     monkeypatch.setattr(cli, "dqs_trend", fake_trend)
 
-    result = runner.invoke(app, ["source", "dqs", "trend", "drug-overdose-deaths", "-f", "json"])
+    result = runner.invoke(
+        app, ["source", "dqs", "trend", "drug-overdose-deaths", "-f", "json"]
+    )
     assert result.exit_code == 0
     data = json.loads(result.stdout)
     assert data[0]["time_period"] == "2018"
@@ -125,8 +143,14 @@ def test_dqs_trend_empty_result_exits_nonzero(monkeypatch):
 
 
 def test_dqs_trend_list_measures(monkeypatch):
-    monkeypatch.setattr(cli, "dqs_estimate_types", lambda *a, **k: ["mg/dL, age adjusted", "mg/dL, crude"])
-    result = runner.invoke(app, ["source", "dqs", "trend", "cholesterol-adults", "--list-measures"])
+    monkeypatch.setattr(
+        cli,
+        "dqs_estimate_types",
+        lambda *a, **k: ["mg/dL, age adjusted", "mg/dL, crude"],
+    )
+    result = runner.invoke(
+        app, ["source", "dqs", "trend", "cholesterol-adults", "--list-measures"]
+    )
     assert result.exit_code == 0
     assert "mg/dL, age adjusted" in result.stdout
 

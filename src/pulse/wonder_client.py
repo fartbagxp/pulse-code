@@ -6,18 +6,18 @@ import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import requests
 
 
 @dataclass
 class ResponseCell:
-    label: Optional[str] = None
-    value: Optional[str] = None
-    data_total: Optional[str] = None
+    label: str | None = None
+    value: str | None = None
+    data_total: str | None = None
 
-    def numeric(self) -> Optional[float]:
+    def numeric(self) -> float | None:
         raw = self.value or self.data_total
         if raw is None:
             return None
@@ -59,7 +59,7 @@ class WonderClient:
         return self.query_from_xml(dataset_id, xml)
 
     @staticmethod
-    def _extract_dataset_id(xml: str) -> Optional[str]:
+    def _extract_dataset_id(xml: str) -> str | None:
         try:
             root = ET.fromstring(xml)
             el = root.find(".//parameter[name='dataset_code']/value")

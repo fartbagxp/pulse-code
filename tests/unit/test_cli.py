@@ -17,7 +17,9 @@ def test_datasets_lists_known_dataset():
 
 
 def test_datasets_topic_filter():
-    result = runner.invoke(app, ["source", "wonder", "datasets", "--topic", "Tuberculosis"])
+    result = runner.invoke(
+        app, ["source", "wonder", "datasets", "--topic", "Tuberculosis"]
+    )
     assert result.exit_code == 0
     assert "D202" in result.stdout
 
@@ -122,7 +124,10 @@ def test_sources_wonder_lists_datasets_with_url():
     result = runner.invoke(app, ["source", "wonder", "--json"])
     assert result.exit_code == 0
     data = json.loads(result.stdout)
-    assert any(d["key"] == "D176" and "wonder.cdc.gov/controller/datarequest" in d["url"] for d in data)
+    assert any(
+        d["key"] == "D176" and "wonder.cdc.gov/controller/datarequest" in d["url"]
+        for d in data
+    )
 
 
 def test_sources_nis_lists_years_with_real_urls():
@@ -180,6 +185,8 @@ def test_list_queries_shows_bundled_queries():
 
 
 def test_list_queries_filtered_by_dataset():
-    result = runner.invoke(app, ["source", "wonder", "list-queries", "--dataset", "D202"])
+    result = runner.invoke(
+        app, ["source", "wonder", "list-queries", "--dataset", "D202"]
+    )
     assert result.exit_code == 0
     assert "D202" in result.stdout

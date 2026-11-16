@@ -86,7 +86,7 @@ SOURCES: list[Source] = [
         "38",
         "1968–present",
         "datasets / info / list-queries / run / build / query / refine / compare / chat",
-        "pulse source wonder query \"fentanyl deaths by state 2020-2024\" -f csv",
+        'pulse source wonder query "fentanyl deaths by state 2020-2024" -f csv',
         "#f87171",
     ),
     Source(
@@ -853,7 +853,7 @@ def render_usage() -> str:
             "pulse source seer                  # what that source offers\n"
             "pulse source seer mortality --site 55 --sex female -f csv\n"
             "pulse source nssp national --start 202401 -f csv\n"
-            'pulse source cdc-open query leading_death --where "year=\'2015\'" -f csv'
+            "pulse source cdc-open query leading_death --where \"year='2015'\" -f csv"
         )
         + """
   <p class="ch-p" style="margin-top:1.5rem"><strong style="color:var(--t)">Drill into one WONDER dataset.</strong> You get its measures, grouping dimensions, and bundled examples:</p>
@@ -1233,7 +1233,7 @@ def main() -> None:
     (_DIST_DIR / "wonder.html").write_text(render_wonder(catalog, by_dataset))
     print("wrote wonder.html")
 
-    for ds_id, ds_queries in by_dataset.items():
+    for ds_queries in by_dataset.values():
         for q in ds_queries:
             stem = Path(q["filename"]).stem
             (examples_dir / f"{stem}.html").write_text(

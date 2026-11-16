@@ -93,7 +93,9 @@ class DelphiClient:
         body = resp.json()
 
         if body.get("result") != 1:
-            raise ValueError(f"Delphi API error: {body.get('message', 'unknown error')}")
+            raise ValueError(
+                f"Delphi API error: {body.get('message', 'unknown error')}"
+            )
 
         data = body.get("epidata", [])
         self._cache[cache_key] = (now, data)

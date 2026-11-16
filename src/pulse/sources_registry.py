@@ -11,8 +11,8 @@ per-dataset url, nis_catalog's per-year dat_url/format_url) — not guesses.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 from pulse.catalog import Catalog
 from pulse.cdc_open_catalog import datasets as _cdc_open_datasets

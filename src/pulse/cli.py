@@ -6,10 +6,12 @@ import csv
 import io
 import json
 import time
-from importlib.metadata import PackageNotFoundError, version as _pkg_version
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _pkg_version
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated
 
+import requests
 import typer
 from rich import box
 from rich.console import Console
@@ -44,7 +46,12 @@ from pulse.grasp_sdk import (
     summarize_hantavirus_by_year,
 )
 from pulse.matcher import match_datasets, match_queries
-from pulse.nis_sdk import get_national_rates, get_vaccination_rates, list_years, stream_records
+from pulse.nis_sdk import (
+    get_national_rates,
+    get_vaccination_rates,
+    list_years,
+    stream_records,
+)
 from pulse.nssp_client import GEO_TYPES as NSSP_GEO_TYPES
 from pulse.nssp_client import SIGNALS as NSSP_SIGNALS
 from pulse.nssp_sdk import get_ed_visits, get_hhs_region_trends, get_national_trends
@@ -83,7 +90,12 @@ from pulse.sudors_sdk import (
 from pulse.sudors_sdk import jurisdictions as sudors_jurisdictions
 from pulse.topics_registry import TOPICS, find_topic
 from pulse.wisqars_catalog import DATASETS as WISQARS_DATASETS
-from pulse.wisqars_catalog import INJURY_INTENTS, INJURY_MECHANISMS, MAPPING_INTENTS, MAPPING_PERIOD_TYPES
+from pulse.wisqars_catalog import (
+    INJURY_INTENTS,
+    INJURY_MECHANISMS,
+    MAPPING_INTENTS,
+    MAPPING_PERIOD_TYPES,
+)
 from pulse.wisqars_sdk import (
     get_injury_census_tract,
     get_injury_county,
@@ -93,6 +105,7 @@ from pulse.wisqars_sdk import (
 )
 from pulse.wisqars_sdk import query_dataset as wisqars_query_dataset
 from pulse.wonder_client import WonderClient
+
 
 class _AlignedHelpGroup(TyperGroup):
     """Root-only help renderer.
@@ -111,7 +124,9 @@ class _AlignedHelpGroup(TyperGroup):
 
         con.print()
         con.print(
-            Text(f"Usage: {ctx.command_path} " + " ".join(self.collect_usage_pieces(ctx))),
+            Text(
+                f"Usage: {ctx.command_path} " + " ".join(self.collect_usage_pieces(ctx))
+            ),
             highlight=False,
         )
         if self.help:
@@ -119,7 +134,9 @@ class _AlignedHelpGroup(TyperGroup):
             con.print(Text(" " + self.help.strip()), highlight=False)
 
         option_rows = [
-            rec for p in self.get_params(ctx) if (rec := p.get_help_record(ctx)) is not None
+            rec
+            for p in self.get_params(ctx)
+            if (rec := p.get_help_record(ctx)) is not None
         ]
         command_rows = []
         for name in self.list_commands(ctx):
@@ -136,7 +153,9 @@ class _AlignedHelpGroup(TyperGroup):
         )
 
         def _panel(title: str, rows: list, name_style: str) -> None:
-            t = Table(box=None, show_header=False, expand=True, pad_edge=False, padding=(0, 1))
+            t = Table(
+                box=None, show_header=False, expand=True, pad_edge=False, padding=(0, 1)
+            )
             t.add_column(style=name_style, no_wrap=True, width=name_width)
             t.add_column(ratio=1, no_wrap=False)
             for name, help_text in rows:
@@ -165,7 +184,9 @@ def _version_callback(value: bool) -> None:
     if value:
         try:
             ver = _pkg_version("pulse-code")
-        except PackageNotFoundError:  # running from a source tree without install metadata
+        except (
+            PackageNotFoundError
+        ):  # running from a source tree without install metadata
             ver = "unknown"
         typer.echo(f"pulse {ver}")
         raise typer.Exit()
@@ -174,7 +195,7 @@ def _version_callback(value: bool) -> None:
 @app.callback()
 def main_callback(
     version: Annotated[
-        Optional[bool],
+        bool | None,
         typer.Option(
             "--version",
             callback=_version_callback,
@@ -332,7 +353,7 @@ def _reference_queries(
 @wonder_app.command("datasets")
 def cmd_datasets(
     topic: Annotated[
-        Optional[str], typer.Option("--topic", "-t", help="Filter by topic")
+        str | None, typer.Option("--topic", "-t", help="Filter by topic")
     ] = None,
     json_out: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
 ):
@@ -434,7 +455,9 @@ def cmd_info(
     ds = catalog.dataset(dataset_id)
     if not ds:
         err.print(f"[red]Dataset {dataset_id!r} not found.[/red]")
-        err.print("Run [bold]pulse source wonder datasets[/bold] to see all available datasets.")
+        err.print(
+            "Run [bold]pulse source wonder datasets[/bold] to see all available datasets."
+        )
         raise typer.Exit(1)
 
     bundled = catalog.queries_for_dataset(ds.id)
@@ -539,18 +562,46 @@ def _search_other_sources(prompt: str, top_n: int = 5) -> list[dict]:
 
     for key, ds in WISQARS_DATASETS.items():
         if q in ds.name.lower() or q in ds.description.lower() or q in key.lower():
-            hits.append({"source": "wisqars", "key": key, "name": ds.name, "command": f"pulse source wisqars query {key}"})
+            hits.append(
+                {
+                    "source": "wisqars",
+                    "key": key,
+                    "name": ds.name,
+                    "command": f"pulse source wisqars query {key}",
+                }
+            )
 
     for key, ds in GRASP_DATASETS.items():
         if q in ds.name.lower() or q in ds.description.lower() or q in key.lower():
-            hits.append({"source": "grasp", "key": key, "name": ds.name, "command": "pulse source grasp list"})
+            hits.append(
+                {
+                    "source": "grasp",
+                    "key": key,
+                    "name": ds.name,
+                    "command": "pulse source grasp list",
+                }
+            )
 
     for ds in cdc_open_datasets():
         if q in ds.name.lower() or q in ds.description.lower() or q in ds.key.lower():
-            hits.append({"source": "cdc-open", "key": ds.key, "name": ds.name, "command": f"pulse source cdc-open query {ds.key}"})
+            hits.append(
+                {
+                    "source": "cdc-open",
+                    "key": ds.key,
+                    "name": ds.name,
+                    "command": f"pulse source cdc-open query {ds.key}",
+                }
+            )
 
     for code, name in search_cancer_sites(prompt):
-        hits.append({"source": "seer", "key": code, "name": name, "command": f"pulse source seer mortality --site {code}"})
+        hits.append(
+            {
+                "source": "seer",
+                "key": code,
+                "name": name,
+                "command": f"pulse source seer mortality --site {code}",
+            }
+        )
 
     return hits[:top_n]
 
@@ -649,7 +700,9 @@ def cmd_search(
         console.print(t)
 
     if other_hits:
-        console.print("[bold cyan]Other Sources (SEER · CDC Open Data · WISQARS · GRASP)[/bold cyan]")
+        console.print(
+            "[bold cyan]Other Sources (SEER · CDC Open Data · WISQARS · GRASP)[/bold cyan]"
+        )
         t = Table(box=box.SIMPLE, show_header=True, header_style="bold")
         t.add_column("Source", width=10)
         t.add_column("Name")
@@ -671,7 +724,7 @@ def cmd_search(
 def cmd_build(
     prompt: Annotated[str, typer.Argument(help="Natural language query description")],
     output: Annotated[
-        Optional[Path], typer.Option("-o", "--output", help="Save XML to file")
+        Path | None, typer.Option("-o", "--output", help="Save XML to file")
     ] = None,
     suggest: Annotated[
         bool,
@@ -728,7 +781,9 @@ def cmd_build(
     if output:
         output.write_text(xml)
         console.print(f"[green]✓[/green] Saved to [bold]{output}[/bold]")
-        console.print(f"[dim]Run it: [bold]pulse source wonder run {output}[/bold][/dim]\n")
+        console.print(
+            f"[dim]Run it: [bold]pulse source wonder run {output}[/bold][/dim]\n"
+        )
     else:
         print(xml)
 
@@ -751,7 +806,7 @@ def cmd_run(
         bool, typer.Option("--no-totals", help="Exclude total rows")
     ] = False,
     output: Annotated[
-        Optional[Path], typer.Option("-o", "--output", help="Save output to file")
+        Path | None, typer.Option("-o", "--output", help="Save output to file")
     ] = None,
 ):
     """Execute a CDC WONDER XML query and display results."""
@@ -788,7 +843,7 @@ def cmd_query(
         str, typer.Option("-f", "--format", help="Output: table|csv|json|xml")
     ] = "table",
     save_xml: Annotated[
-        Optional[Path], typer.Option("--save-xml", help="Save generated XML")
+        Path | None, typer.Option("--save-xml", help="Save generated XML")
     ] = None,
     timeout: Annotated[int, typer.Option("-t", "--timeout")] = 120,
     no_totals: Annotated[bool, typer.Option("--no-totals")] = False,
@@ -849,7 +904,7 @@ def cmd_compare(
         str, typer.Option("-f", "--format", help="Output: table|csv|json|xml")
     ] = "table",
     save_xml_dir: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option("--save-xml-dir", help="Directory to save each sub-query's XML"),
     ] = None,
     timeout: Annotated[int, typer.Option("-t", "--timeout")] = 120,
@@ -862,7 +917,7 @@ def cmd_compare(
 
     refs = _reference_queries(prompt, catalog)
     try:
-        from pulse.llm_builder import get_query_builder, WonderRequestSet
+        from pulse.llm_builder import WonderRequestSet, get_query_builder
 
         builder = get_query_builder()
         result = builder.build_any(prompt, reference_queries=refs)
@@ -927,7 +982,7 @@ def cmd_refine(
         str, typer.Argument(help="What to change (e.g. 'break down by state')")
     ],
     output: Annotated[
-        Optional[Path], typer.Option("-o", "--output", help="Save refined XML")
+        Path | None, typer.Option("-o", "--output", help="Save refined XML")
     ] = None,
     execute: Annotated[
         bool, typer.Option("--run", help="Also execute the refined query")
@@ -992,7 +1047,7 @@ def cmd_refine(
 @wonder_app.command("chat")
 def cmd_chat(
     initial_prompt: Annotated[
-        Optional[str], typer.Argument(help="Optional first request to start with")
+        str | None, typer.Argument(help="Optional first request to start with")
     ] = None,
 ):
     """Interactively build and refine a CDC WONDER query over multiple turns."""
@@ -1009,8 +1064,8 @@ def cmd_chat(
         err.print(f"[red]{e}[/red]")
         raise typer.Exit(1)
 
-    current_xml: Optional[str] = None
-    current_dataset_id: Optional[str] = None
+    current_xml: str | None = None
+    current_dataset_id: str | None = None
 
     console.print(
         "\n[bold]pulse source wonder chat[/bold] — describe a query, then refine it turn by turn."
@@ -1102,7 +1157,7 @@ def cmd_chat(
 @app.command("topics")
 def cmd_topics(
     topic: Annotated[
-        Optional[str], typer.Argument(help="Topic to drill into, e.g. mortality, cancer")
+        str | None, typer.Argument(help="Topic to drill into, e.g. mortality, cancer")
     ] = None,
     json_out: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
 ):
@@ -1117,7 +1172,10 @@ def cmd_topics(
                             "label": t.label,
                             "description": t.description,
                             "sources": [s.source for s in t.sources],
-                            "default_source": next((s.source for s in t.sources if s.is_default), t.sources[0].source),
+                            "default_source": next(
+                                (s.source for s in t.sources if s.is_default),
+                                t.sources[0].source,
+                            ),
                         }
                         for t in TOPICS
                     ],
@@ -1126,7 +1184,13 @@ def cmd_topics(
             )
             return
 
-        table = Table(box=box.ROUNDED, show_header=True, header_style="bold cyan", border_style="dim", expand=True)
+        table = Table(
+            box=box.ROUNDED,
+            show_header=True,
+            header_style="bold cyan",
+            border_style="dim",
+            expand=True,
+        )
         table.add_column("Topic", style="bold", width=32, no_wrap=True)
         table.add_column("Default Source", width=14, no_wrap=True)
         table.add_column("Number of Sources", justify="right", width=17)
@@ -1211,13 +1275,29 @@ def _render_source_datasets(key: str, json_out: bool) -> None:
     if json_out:
         print(
             json.dumps(
-                [{"key": r.key, "title": r.title, "url": r.url, "years": r.years, "credit": r.credit, "notes": r.notes} for r in rows],
+                [
+                    {
+                        "key": r.key,
+                        "title": r.title,
+                        "url": r.url,
+                        "years": r.years,
+                        "credit": r.credit,
+                        "notes": r.notes,
+                    }
+                    for r in rows
+                ],
                 indent=2,
             )
         )
         return
 
-    t = Table(box=box.ROUNDED, show_header=True, header_style="bold cyan", border_style="dim", expand=True)
+    t = Table(
+        box=box.ROUNDED,
+        show_header=True,
+        header_style="bold cyan",
+        border_style="dim",
+        expand=True,
+    )
     t.add_column("Key", style="bold yellow", width=14, no_wrap=True)
     t.add_column("Title", ratio=1)
     t.add_column("Years", width=14, no_wrap=True)
@@ -1304,7 +1384,9 @@ def _render_source_overview(json_out: bool) -> None:
         print(json.dumps(sources, indent=2))
         return
 
-    t = Table(box=box.ROUNDED, show_header=True, header_style="bold cyan", border_style="dim")
+    t = Table(
+        box=box.ROUNDED, show_header=True, header_style="bold cyan", border_style="dim"
+    )
     t.add_column("Source", style="bold yellow", width=15)
     t.add_column("Coverage", ratio=1)
     t.add_column("Datasets", justify="right", width=9)
@@ -1426,7 +1508,10 @@ def nis_callback(
 _DOCTOR_ENDPOINTS = [
     ("WONDER", "https://wonder.cdc.gov/"),
     ("SEER", "https://seer.cancer.gov/statistics-network/explorer/"),
-    ("CDC Open Data / WISQARS", "https://data.cdc.gov/resource/bi63-dtpu.json?$limit=1"),
+    (
+        "CDC Open Data / WISQARS",
+        "https://data.cdc.gov/resource/bi63-dtpu.json?$limit=1",
+    ),
     ("DQS", "https://data.cdc.gov/resource/rdjz-vn2n.json?$limit=1"),
     ("GRASP", GRASP_DATASETS["hantavirus"].url),
     ("GRASP / NSSP (Delphi)", "https://api.delphi.cmu.edu/epidata/covidcast_meta/"),
@@ -1447,7 +1532,9 @@ _DOCTOR_ENDPOINTS = [
 ]
 
 
-def _check_url(url: str, timeout: float = 8.0, user_agent: str = "pulse-doctor") -> tuple[bool, str]:
+def _check_url(
+    url: str, timeout: float = 8.0, user_agent: str = "pulse-doctor"
+) -> tuple[bool, str]:
     import time
 
     import requests
@@ -1476,7 +1563,12 @@ def cmd_doctor():
     # LLM provider — informational only, most commands don't need it.
     provider = os.environ.get("LLM_PROVIDER", "anthropic")
     if provider == "azure_openai":
-        required = ["AZURE_OPENAI_API_KEY", "AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_DEPLOYMENT", "AZURE_OPENAI_API_VERSION"]
+        required = [
+            "AZURE_OPENAI_API_KEY",
+            "AZURE_OPENAI_ENDPOINT",
+            "AZURE_OPENAI_DEPLOYMENT",
+            "AZURE_OPENAI_API_VERSION",
+        ]
         missing = [v for v in required if not os.environ.get(v)]
         llm_ok = not missing
         llm_detail = "all set" if llm_ok else f"missing: {', '.join(missing)}"
@@ -1484,7 +1576,9 @@ def cmd_doctor():
         llm_ok = bool(os.environ.get("ANTHROPIC_API_KEY"))
         llm_detail = "ANTHROPIC_API_KEY set" if llm_ok else "ANTHROPIC_API_KEY not set"
 
-    t = Table(box=box.ROUNDED, show_header=True, header_style="bold cyan", border_style="dim")
+    t = Table(
+        box=box.ROUNDED, show_header=True, header_style="bold cyan", border_style="dim"
+    )
     t.add_column("Check", width=26)
     t.add_column("Status", width=8)
     t.add_column("Detail")
@@ -1519,7 +1613,7 @@ def cmd_doctor():
 
 @wonder_app.command("list-queries")
 def cmd_list_queries(
-    dataset_id: Annotated[Optional[str], typer.Option("--dataset", "-d")] = None,
+    dataset_id: Annotated[str | None, typer.Option("--dataset", "-d")] = None,
     json_out: Annotated[bool, typer.Option("--json")] = False,
 ):
     """List all bundled example queries."""
@@ -1603,7 +1697,7 @@ def cmd_generate(
         str, typer.Argument(help="Path to XML query file, or bundled query filename")
     ],
     output: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option("-o", "--output", help="Save the generated script to a file"),
     ] = None,
 ):
@@ -1624,7 +1718,9 @@ def cmd_generate(
     xml = path.read_text()
     dataset_id = WonderClient._extract_dataset_id(xml)
     if not dataset_id:
-        err.print("[red]Could not find a dataset_code in this query's request-parameters.[/red]")
+        err.print(
+            "[red]Could not find a dataset_code in this query's request-parameters.[/red]"
+        )
         raise typer.Exit(1)
 
     stem = path.stem.removesuffix("-req")
@@ -1706,7 +1802,8 @@ _SEER_RACE = Annotated[
     str, typer.Option("--race", help=f"Race code, one of: {sorted(RACE)}")
 ]
 _SEER_AGE = Annotated[
-    str, typer.Option("--age-range", help=f"Age range code, one of: {sorted(AGE_RANGE)}")
+    str,
+    typer.Option("--age-range", help=f"Age range code, one of: {sorted(AGE_RANGE)}"),
 ]
 _SEER_FORMAT = Annotated[str, typer.Option("-f", "--format", help="table|csv|json")]
 
@@ -1714,7 +1811,7 @@ _SEER_FORMAT = Annotated[str, typer.Option("-f", "--format", help="table|csv|jso
 @seer_app.command("sites")
 def cmd_seer_sites(
     search: Annotated[
-        Optional[str], typer.Option("--search", help="Substring search e.g. 'breast'")
+        str | None, typer.Option("--search", help="Substring search e.g. 'breast'")
     ] = None,
     json_out: Annotated[bool, typer.Option("--json")] = False,
 ):
@@ -1740,13 +1837,13 @@ def cmd_seer_mortality(
     race: _SEER_RACE = "1",
     age_range: _SEER_AGE = "1",
     compare_by: Annotated[
-        Optional[str], typer.Option("--compare-by", help="sex|race|age_range")
+        str | None, typer.Option("--compare-by", help="sex|race|age_range")
     ] = None,
     long_term: Annotated[
         bool, typer.Option("--long-term", help="1975-present instead of 2000-present")
     ] = False,
     format: _SEER_FORMAT = "table",
-    output: Annotated[Optional[Path], typer.Option("-o", "--output")] = None,
+    output: Annotated[Path | None, typer.Option("-o", "--output")] = None,
 ):
     """U.S. mortality rate/count by year for a cancer site."""
     rows = get_mortality_trend(
@@ -1770,11 +1867,11 @@ def cmd_seer_incidence(
         str, typer.Option("--stage", help=f"Stage code, one of: {sorted(STAGE)}")
     ] = "101",
     compare_by: Annotated[
-        Optional[str], typer.Option("--compare-by", help="sex|race|age_range")
+        str | None, typer.Option("--compare-by", help="sex|race|age_range")
     ] = None,
     long_term: Annotated[bool, typer.Option("--long-term")] = False,
     format: _SEER_FORMAT = "table",
-    output: Annotated[Optional[Path], typer.Option("-o", "--output")] = None,
+    output: Annotated[Path | None, typer.Option("-o", "--output")] = None,
 ):
     """SEER incidence rate/count by year for a cancer site."""
     rows = get_incidence_trend(
@@ -1795,10 +1892,10 @@ def cmd_seer_by_age(
     sex: _SEER_SEX = "both",
     race: _SEER_RACE = "1",
     compare_by: Annotated[
-        Optional[str], typer.Option("--compare-by", help="sex|race")
+        str | None, typer.Option("--compare-by", help="sex|race")
     ] = None,
     format: _SEER_FORMAT = "table",
-    output: Annotated[Optional[Path], typer.Option("-o", "--output")] = None,
+    output: Annotated[Path | None, typer.Option("-o", "--output")] = None,
 ):
     """U.S. mortality rate/count by age group for a cancer site."""
     rows = get_mortality_by_age(site=site, sex=sex, race=race, compare_by=compare_by)
@@ -1812,7 +1909,7 @@ def cmd_seer_compare_sites(
     race: _SEER_RACE = "1",
     age_range: _SEER_AGE = "1",
     format: _SEER_FORMAT = "table",
-    output: Annotated[Optional[Path], typer.Option("-o", "--output")] = None,
+    output: Annotated[Path | None, typer.Option("-o", "--output")] = None,
 ):
     """Compare U.S. mortality trends across multiple cancer sites."""
     rows = compare_sites_mortality(sites=sites, sex=sex, race=race, age_range=age_range)
@@ -1824,7 +1921,7 @@ def cmd_seer_compare_sites(
 
 @cdc_open_app.command("list")
 def cmd_cdc_open_list(
-    search: Annotated[Optional[str], typer.Option("--search", "-s")] = None,
+    search: Annotated[str | None, typer.Option("--search", "-s")] = None,
     json_out: Annotated[bool, typer.Option("--json")] = False,
 ):
     """List/search the CDC Open Data (data.cdc.gov) dataset registry."""
@@ -1861,7 +1958,7 @@ def cmd_cdc_open_list(
     console.print(t)
     console.print(
         f"\n[dim]{len(ds)} datasets  |  "
-        f'[bold]pulse source cdc-open query <key-or-id>[/bold][/dim]\n'
+        f"[bold]pulse source cdc-open query <key-or-id>[/bold][/dim]\n"
     )
 
 
@@ -1871,20 +1968,20 @@ def cmd_cdc_open_query(
         str, typer.Argument(help="Registry key (e.g. leading_death) or Socrata ID")
     ],
     where: Annotated[
-        Optional[str], typer.Option("--where", help="SODA $where clause")
+        str | None, typer.Option("--where", help="SODA $where clause")
     ] = None,
     select: Annotated[
-        Optional[str], typer.Option("--select", help="SODA $select clause")
+        str | None, typer.Option("--select", help="SODA $select clause")
     ] = None,
     group: Annotated[
-        Optional[str], typer.Option("--group", help="SODA $group clause")
+        str | None, typer.Option("--group", help="SODA $group clause")
     ] = None,
     order: Annotated[
-        Optional[str], typer.Option("--order", help="SODA $order clause")
+        str | None, typer.Option("--order", help="SODA $order clause")
     ] = None,
     limit: Annotated[int, typer.Option("--limit", help="Max rows")] = 200,
     format: Annotated[str, typer.Option("-f", "--format")] = "table",
-    output: Annotated[Optional[Path], typer.Option("-o", "--output")] = None,
+    output: Annotated[Path | None, typer.Option("-o", "--output")] = None,
 ):
     """Run a raw SODA query against a data.cdc.gov dataset."""
     ds = cdc_open_dataset(dataset_id)
@@ -1902,7 +1999,7 @@ def cmd_cdc_open_query(
             order=order,
             limit=limit,
         )
-    except Exception as e:
+    except requests.RequestException as e:
         err.print(f"[red]Error from CDC Open Data:[/red] {e}")
         raise typer.Exit(1)
 
@@ -1914,8 +2011,13 @@ def cmd_cdc_open_query(
 
 @dqs_app.command("list")
 def cmd_dqs_list(
-    search: Annotated[Optional[str], typer.Option("--search", "-s", help="Substring match on key/name/topic/survey")] = None,
-    topic: Annotated[Optional[str], typer.Option("--topic", "-t", help="Filter to one topic bucket")] = None,
+    search: Annotated[
+        str | None,
+        typer.Option("--search", "-s", help="Substring match on key/name/topic/survey"),
+    ] = None,
+    topic: Annotated[
+        str | None, typer.Option("--topic", "-t", help="Filter to one topic bucket")
+    ] = None,
     json_out: Annotated[bool, typer.Option("--json")] = False,
 ):
     """List/search the NCHS DQS dataset registry (28 Health, United States tables)."""
@@ -1963,14 +2065,25 @@ def cmd_dqs_list(
 
 @dqs_app.command("query")
 def cmd_dqs_query(
-    dataset_id: Annotated[str, typer.Argument(help="Registry key (e.g. drug-overdose-deaths) or Socrata ID")],
-    where: Annotated[Optional[str], typer.Option("--where", help="SODA $where clause")] = None,
-    select: Annotated[Optional[str], typer.Option("--select", help="SODA $select clause")] = None,
-    group: Annotated[Optional[str], typer.Option("--group", help="SODA $group clause")] = None,
-    order: Annotated[Optional[str], typer.Option("--order", help="SODA $order clause")] = None,
+    dataset_id: Annotated[
+        str,
+        typer.Argument(help="Registry key (e.g. drug-overdose-deaths) or Socrata ID"),
+    ],
+    where: Annotated[
+        str | None, typer.Option("--where", help="SODA $where clause")
+    ] = None,
+    select: Annotated[
+        str | None, typer.Option("--select", help="SODA $select clause")
+    ] = None,
+    group: Annotated[
+        str | None, typer.Option("--group", help="SODA $group clause")
+    ] = None,
+    order: Annotated[
+        str | None, typer.Option("--order", help="SODA $order clause")
+    ] = None,
     limit: Annotated[int, typer.Option("--limit", help="Max rows")] = 200,
     format: Annotated[str, typer.Option("-f", "--format")] = "table",
-    output: Annotated[Optional[Path], typer.Option("-o", "--output")] = None,
+    output: Annotated[Path | None, typer.Option("-o", "--output")] = None,
 ):
     """Run a raw SODA query against a DQS dataset. `classification='Total'` is the all-persons row."""
     ds = dqs_dataset(dataset_id)
@@ -1978,8 +2091,15 @@ def cmd_dqs_query(
     err.print(f"[bold]Querying:[/bold] {socrata_id}" + (f"  ({ds.name})" if ds else ""))
 
     try:
-        rows = dqs_query(dataset_id, where=where, select=select, group=group, order=order, limit=limit)
-    except Exception as e:
+        rows = dqs_query(
+            dataset_id,
+            where=where,
+            select=select,
+            group=group,
+            order=order,
+            limit=limit,
+        )
+    except requests.RequestException as e:
         err.print(f"[red]Error from CDC DQS:[/red] {e}")
         raise typer.Exit(1)
 
@@ -1990,14 +2110,20 @@ def cmd_dqs_query(
 def cmd_dqs_trend(
     dataset_id: Annotated[str, typer.Argument(help="Registry key or Socrata ID")],
     estimate_type: Annotated[
-        Optional[str], typer.Option("--estimate-type", "-e", help="Narrow to one measure (see --list-measures)")
+        str | None,
+        typer.Option(
+            "--estimate-type", "-e", help="Narrow to one measure (see --list-measures)"
+        ),
     ] = None,
     list_measures: Annotated[
-        bool, typer.Option("--list-measures", help="Print the dataset's estimate_type values and exit")
+        bool,
+        typer.Option(
+            "--list-measures", help="Print the dataset's estimate_type values and exit"
+        ),
     ] = False,
     limit: Annotated[int, typer.Option("--limit")] = 1000,
     format: Annotated[str, typer.Option("-f", "--format")] = "table",
-    output: Annotated[Optional[Path], typer.Option("-o", "--output")] = None,
+    output: Annotated[Path | None, typer.Option("-o", "--output")] = None,
 ):
     """All-persons ('Total') national trend for a DQS dataset, oldest→newest."""
     ds = dqs_dataset(dataset_id)
@@ -2006,10 +2132,14 @@ def cmd_dqs_trend(
     if list_measures:
         try:
             measures = dqs_estimate_types(dataset_id)
-        except Exception as e:
+        except requests.RequestException as e:
             err.print(f"[red]Error from CDC DQS:[/red] {e}")
             raise typer.Exit(1)
-        err.print(f"[bold]{socrata_id}[/bold]" + (f"  ({ds.name})" if ds else "") + " — estimate types:")
+        err.print(
+            f"[bold]{socrata_id}[/bold]"
+            + (f"  ({ds.name})" if ds else "")
+            + " — estimate types:"
+        )
         for m in measures:
             console.print(f"  • {m}")
         return
@@ -2017,12 +2147,14 @@ def cmd_dqs_trend(
     err.print(f"[bold]Trend:[/bold] {socrata_id}" + (f"  ({ds.name})" if ds else ""))
     try:
         rows = dqs_trend(dataset_id, estimate_type=estimate_type, limit=limit)
-    except Exception as e:
+    except requests.RequestException as e:
         err.print(f"[red]Error from CDC DQS:[/red] {e}")
         raise typer.Exit(1)
 
     if not rows:
-        err.print("[yellow]No 'Total' rows returned. Try `pulse source dqs query` with a --where filter.[/yellow]")
+        err.print(
+            "[yellow]No 'Total' rows returned. Try `pulse source dqs query` with a --where filter.[/yellow]"
+        )
         raise typer.Exit(1)
 
     _print_rows(rows, format, output)
@@ -2059,7 +2191,12 @@ def _sudors_rows(fn, year, jurisdiction, limit, format, output) -> None:
 
 @sudors_app.command("list")
 def cmd_sudors_list(
-    search: Annotated[Optional[str], typer.Option("--search", "-s", help="Substring match on key/name/grain/description")] = None,
+    search: Annotated[
+        str | None,
+        typer.Option(
+            "--search", "-s", help="Substring match on key/name/grain/description"
+        ),
+    ] = None,
     json_out: Annotated[bool, typer.Option("--json")] = False,
 ):
     """List/search the SUDORS slices this CLI can pull."""
@@ -2110,11 +2247,14 @@ def cmd_sudors_drugs(
             help="Drugs found on toxicology (xylazine, nitazenes, carfentanil...) instead of drugs ruled as causing death",
         ),
     ] = False,
-    year: Annotated[Optional[int], typer.Option("--year", "-y", help="Data year")] = None,
-    jurisdiction: Annotated[Optional[str], typer.Option("--jurisdiction", "-j", help="State name, or 'Overall'")] = None,
-    limit: Annotated[Optional[int], typer.Option("--limit")] = None,
+    year: Annotated[int | None, typer.Option("--year", "-y", help="Data year")] = None,
+    jurisdiction: Annotated[
+        str | None,
+        typer.Option("--jurisdiction", "-j", help="State name, or 'Overall'"),
+    ] = None,
+    limit: Annotated[int | None, typer.Option("--limit")] = None,
     format: Annotated[str, typer.Option("-f", "--format")] = "table",
-    output: Annotated[Optional[Path], typer.Option("-o", "--output")] = None,
+    output: Annotated[Path | None, typer.Option("-o", "--output")] = None,
 ):
     """
     Drugs involved in overdose deaths.
@@ -2124,17 +2264,30 @@ def cmd_sudors_drugs(
     they were ruled a cause — the cut ICD-10 cannot express, since T40.4 collapses
     every synthetic opioid but methadone into one code and xylazine has none.
     """
-    _sudors_rows(get_drugs_detected if detected else get_drugs_involved, year, jurisdiction, limit, format, output)
+    _sudors_rows(
+        get_drugs_detected if detected else get_drugs_involved,
+        year,
+        jurisdiction,
+        limit,
+        format,
+        output,
+    )
 
 
 @sudors_app.command("circumstances")
 def cmd_sudors_circumstances(
-    section: Annotated[Optional[str], typer.Option("--section", help="Substring match on the circumstance section")] = None,
-    year: Annotated[Optional[int], typer.Option("--year", "-y")] = None,
-    jurisdiction: Annotated[Optional[str], typer.Option("--jurisdiction", "-j", help="State name, or 'Overall'")] = None,
-    limit: Annotated[Optional[int], typer.Option("--limit")] = None,
+    section: Annotated[
+        str | None,
+        typer.Option("--section", help="Substring match on the circumstance section"),
+    ] = None,
+    year: Annotated[int | None, typer.Option("--year", "-y")] = None,
+    jurisdiction: Annotated[
+        str | None,
+        typer.Option("--jurisdiction", "-j", help="State name, or 'Overall'"),
+    ] = None,
+    limit: Annotated[int | None, typer.Option("--limit")] = None,
     format: Annotated[str, typer.Option("-f", "--format")] = "table",
-    output: Annotated[Optional[Path], typer.Option("-o", "--output")] = None,
+    output: Annotated[Path | None, typer.Option("-o", "--output")] = None,
 ):
     """
     Circumstances surrounding the death — what SUDORS exists for.
@@ -2159,12 +2312,18 @@ def cmd_sudors_circumstances(
 
 @sudors_app.command("demographics")
 def cmd_sudors_demographics(
-    dimension: Annotated[Optional[str], typer.Option("--dimension", "-d", help="One of: sex, age, race_ethnicity")] = None,
-    year: Annotated[Optional[int], typer.Option("--year", "-y")] = None,
-    jurisdiction: Annotated[Optional[str], typer.Option("--jurisdiction", "-j", help="State name, or 'Overall'")] = None,
-    limit: Annotated[Optional[int], typer.Option("--limit")] = None,
+    dimension: Annotated[
+        str | None,
+        typer.Option("--dimension", "-d", help="One of: sex, age, race_ethnicity"),
+    ] = None,
+    year: Annotated[int | None, typer.Option("--year", "-y")] = None,
+    jurisdiction: Annotated[
+        str | None,
+        typer.Option("--jurisdiction", "-j", help="State name, or 'Overall'"),
+    ] = None,
+    limit: Annotated[int | None, typer.Option("--limit")] = None,
     format: Annotated[str, typer.Option("-f", "--format")] = "table",
-    output: Annotated[Optional[Path], typer.Option("-o", "--output")] = None,
+    output: Annotated[Path | None, typer.Option("-o", "--output")] = None,
 ):
     """
     Deaths by sex, age band, and race/ethnicity.
@@ -2182,7 +2341,9 @@ def cmd_sudors_demographics(
         want = dimension.strip().lower()
         rows = [r for r in rows if r.get("dimension") == want]
         if not rows:
-            err.print("[yellow]Unknown --dimension.[/yellow] Use one of: sex, age, race_ethnicity.")
+            err.print(
+                "[yellow]Unknown --dimension.[/yellow] Use one of: sex, age, race_ethnicity."
+            )
             raise typer.Exit(1)
     if limit:
         rows = rows[:limit]
@@ -2191,12 +2352,17 @@ def cmd_sudors_demographics(
 
 @sudors_app.command("months")
 def cmd_sudors_months(
-    drug: Annotated[Optional[str], typer.Option("--drug", help="Substring match on the drug class")] = None,
-    year: Annotated[Optional[int], typer.Option("--year", "-y")] = None,
-    jurisdiction: Annotated[Optional[str], typer.Option("--jurisdiction", "-j", help="State name, or 'Overall'")] = None,
-    limit: Annotated[Optional[int], typer.Option("--limit")] = None,
+    drug: Annotated[
+        str | None, typer.Option("--drug", help="Substring match on the drug class")
+    ] = None,
+    year: Annotated[int | None, typer.Option("--year", "-y")] = None,
+    jurisdiction: Annotated[
+        str | None,
+        typer.Option("--jurisdiction", "-j", help="State name, or 'Overall'"),
+    ] = None,
+    limit: Annotated[int | None, typer.Option("--limit")] = None,
     format: Annotated[str, typer.Option("-f", "--format")] = "table",
-    output: Annotated[Optional[Path], typer.Option("-o", "--output")] = None,
+    output: Annotated[Path | None, typer.Option("-o", "--output")] = None,
 ):
     """Monthly death counts by drug class — SUDORS' only sub-annual cut."""
     try:
@@ -2214,18 +2380,38 @@ def cmd_sudors_months(
 
 @sudors_app.command("trend")
 def cmd_sudors_trend(
-    measure: Annotated[Optional[str], typer.Option("--measure", "-m", help="Substring match on the measure name, e.g. imfs_rate")] = None,
-    trend_range: Annotated[Optional[str], typer.Option("--range", "-r", help="e.g. '2020 to 2024'")] = None,
+    measure: Annotated[
+        str | None,
+        typer.Option(
+            "--measure",
+            "-m",
+            help="Substring match on the measure name, e.g. imfs_rate",
+        ),
+    ] = None,
+    trend_range: Annotated[
+        str | None, typer.Option("--range", "-r", help="e.g. '2020 to 2024'")
+    ] = None,
     statistics: Annotated[
-        bool, typer.Option("--statistics", help="First-to-last-year change per jurisdiction instead of the year series")
+        bool,
+        typer.Option(
+            "--statistics",
+            help="First-to-last-year change per jurisdiction instead of the year series",
+        ),
     ] = False,
     scope: Annotated[
-        str, typer.Option("--scope", help="'chart' (jurisdictions in every year) or 'map' (first and last only), or 'all'")
+        str,
+        typer.Option(
+            "--scope",
+            help="'chart' (jurisdictions in every year) or 'map' (first and last only), or 'all'",
+        ),
     ] = "chart",
-    jurisdiction: Annotated[Optional[str], typer.Option("--jurisdiction", "-j", help="Narrow to one jurisdiction")] = None,
-    limit: Annotated[Optional[int], typer.Option("--limit")] = None,
+    jurisdiction: Annotated[
+        str | None,
+        typer.Option("--jurisdiction", "-j", help="Narrow to one jurisdiction"),
+    ] = None,
+    limit: Annotated[int | None, typer.Option("--limit")] = None,
     format: Annotated[str, typer.Option("-f", "--format")] = "table",
-    output: Annotated[Optional[Path], typer.Option("-o", "--output")] = None,
+    output: Annotated[Path | None, typer.Option("-o", "--output")] = None,
 ):
     """
     The cross-year-comparable series — the only SUDORS table safe to plot over time.
@@ -2271,7 +2457,10 @@ def cmd_sudors_trend(
 
 @sudors_app.command("jurisdictions")
 def cmd_sudors_jurisdictions(
-    year: Annotated[Optional[int], typer.Option("--year", "-y", help="Only jurisdictions reporting that year")] = None,
+    year: Annotated[
+        int | None,
+        typer.Option("--year", "-y", help="Only jurisdictions reporting that year"),
+    ] = None,
     json_out: Annotated[bool, typer.Option("--json")] = False,
 ):
     """
@@ -2291,7 +2480,9 @@ def cmd_sudors_jurisdictions(
         return
 
     label = f"reporting in {year}" if year else "in the release"
-    console.print(f"\n[bold]{len(names)} jurisdictions[/bold] {label} [dim](includes the combined 'Overall' row)[/dim]\n")
+    console.print(
+        f"\n[bold]{len(names)} jurisdictions[/bold] {label} [dim](includes the combined 'Overall' row)[/dim]\n"
+    )
     for name in names:
         console.print(f"  • {name}")
     console.print()
@@ -2299,12 +2490,14 @@ def cmd_sudors_jurisdictions(
 
 @sudors_app.command("get")
 def cmd_sudors_get(
-    key: Annotated[str, typer.Argument(help="Registry key — see `pulse source sudors list`")],
-    year: Annotated[Optional[int], typer.Option("--year", "-y")] = None,
-    jurisdiction: Annotated[Optional[str], typer.Option("--jurisdiction", "-j")] = None,
-    limit: Annotated[Optional[int], typer.Option("--limit")] = None,
+    key: Annotated[
+        str, typer.Argument(help="Registry key — see `pulse source sudors list`")
+    ],
+    year: Annotated[int | None, typer.Option("--year", "-y")] = None,
+    jurisdiction: Annotated[str | None, typer.Option("--jurisdiction", "-j")] = None,
+    limit: Annotated[int | None, typer.Option("--limit")] = None,
     format: Annotated[str, typer.Option("-f", "--format")] = "table",
-    output: Annotated[Optional[Path], typer.Option("-o", "--output")] = None,
+    output: Annotated[Path | None, typer.Option("-o", "--output")] = None,
 ):
     """Pull any registered slice by key, including the ones without a shortcut command."""
     loader = SUDORS_LOADERS.get(key)
@@ -2354,7 +2547,7 @@ def cmd_sudors_release(
 # ── wisqars ───────────────────────────────────────────────────────────────────
 
 _WISQARS_FORMAT = Annotated[str, typer.Option("-f", "--format", help="table|csv|json")]
-_WISQARS_OUTPUT = Annotated[Optional[Path], typer.Option("-o", "--output")]
+_WISQARS_OUTPUT = Annotated[Path | None, typer.Option("-o", "--output")]
 
 
 @wisqars_app.command("list")
@@ -2381,32 +2574,46 @@ def cmd_wisqars_list(json_out: Annotated[bool, typer.Option("--json")] = False):
 
 @wisqars_app.command("mortality")
 def cmd_wisqars_mortality(
-    intent: Annotated[Optional[str], typer.Option("--intent", help=f"One of: {INJURY_INTENTS}")] = None,
-    mechanism: Annotated[
-        Optional[str], typer.Option("--mechanism", help=f"One of: {INJURY_MECHANISMS}")
+    intent: Annotated[
+        str | None, typer.Option("--intent", help=f"One of: {INJURY_INTENTS}")
     ] = None,
-    sex: Annotated[Optional[str], typer.Option("--sex", help="Both sexes|Male|Female")] = None,
-    age: Annotated[Optional[str], typer.Option("--age", help="e.g. 'All Ages', '25-34', '< 15'")] = None,
-    race: Annotated[Optional[str], typer.Option("--race")] = None,
-    year: Annotated[Optional[int], typer.Option("--year", help="1999-2016")] = None,
+    mechanism: Annotated[
+        str | None, typer.Option("--mechanism", help=f"One of: {INJURY_MECHANISMS}")
+    ] = None,
+    sex: Annotated[
+        str | None, typer.Option("--sex", help="Both sexes|Male|Female")
+    ] = None,
+    age: Annotated[
+        str | None, typer.Option("--age", help="e.g. 'All Ages', '25-34', '< 15'")
+    ] = None,
+    race: Annotated[str | None, typer.Option("--race")] = None,
+    year: Annotated[int | None, typer.Option("--year", help="1999-2016")] = None,
     limit: Annotated[int, typer.Option("--limit")] = 500,
     format: _WISQARS_FORMAT = "table",
     output: _WISQARS_OUTPUT = None,
 ):
     """Fatal injury by mechanism/intent/demographics (1999-2016)."""
     rows = get_injury_mortality(
-        intent=intent, mechanism=mechanism, sex=sex, age=age, race=race, year=year, limit=limit
+        intent=intent,
+        mechanism=mechanism,
+        sex=sex,
+        age=age,
+        race=race,
+        year=year,
+        limit=limit,
     )
     _print_rows(rows, format, output)
 
 
 @wisqars_app.command("national")
 def cmd_wisqars_national(
-    intent: Annotated[Optional[str], typer.Option("--intent", help=f"One of: {MAPPING_INTENTS}")] = None,
-    type: Annotated[
-        Optional[str], typer.Option("--type", help=f"One of: {MAPPING_PERIOD_TYPES}")
+    intent: Annotated[
+        str | None, typer.Option("--intent", help=f"One of: {MAPPING_INTENTS}")
     ] = None,
-    year: Annotated[Optional[str], typer.Option("--year", help="e.g. '2023'")] = None,
+    type: Annotated[
+        str | None, typer.Option("--type", help=f"One of: {MAPPING_PERIOD_TYPES}")
+    ] = None,
+    year: Annotated[str | None, typer.Option("--year", help="e.g. '2023'")] = None,
     format: _WISQARS_FORMAT = "table",
     output: _WISQARS_OUTPUT = None,
 ):
@@ -2417,9 +2624,15 @@ def cmd_wisqars_national(
 
 @wisqars_app.command("state")
 def cmd_wisqars_state(
-    state: Annotated[Optional[str], typer.Option("--state", help="State name or 2-digit FIPS")] = None,
-    intent: Annotated[Optional[str], typer.Option("--intent", help=f"One of: {MAPPING_INTENTS}")] = None,
-    year: Annotated[Optional[str], typer.Option("--year", help="e.g. '2023' or 'TTM'")] = None,
+    state: Annotated[
+        str | None, typer.Option("--state", help="State name or 2-digit FIPS")
+    ] = None,
+    intent: Annotated[
+        str | None, typer.Option("--intent", help=f"One of: {MAPPING_INTENTS}")
+    ] = None,
+    year: Annotated[
+        str | None, typer.Option("--year", help="e.g. '2023' or 'TTM'")
+    ] = None,
     limit: Annotated[int, typer.Option("--limit")] = 500,
     format: _WISQARS_FORMAT = "table",
     output: _WISQARS_OUTPUT = None,
@@ -2431,42 +2644,52 @@ def cmd_wisqars_state(
 
 @wisqars_app.command("county")
 def cmd_wisqars_county(
-    state: Annotated[Optional[str], typer.Option("--state")] = None,
-    county: Annotated[Optional[str], typer.Option("--county", help="Partial name match")] = None,
-    intent: Annotated[Optional[str], typer.Option("--intent", help=f"One of: {MAPPING_INTENTS}")] = None,
-    year: Annotated[Optional[str], typer.Option("--year")] = None,
+    state: Annotated[str | None, typer.Option("--state")] = None,
+    county: Annotated[
+        str | None, typer.Option("--county", help="Partial name match")
+    ] = None,
+    intent: Annotated[
+        str | None, typer.Option("--intent", help=f"One of: {MAPPING_INTENTS}")
+    ] = None,
+    year: Annotated[str | None, typer.Option("--year")] = None,
     limit: Annotated[int, typer.Option("--limit")] = 500,
     format: _WISQARS_FORMAT = "table",
     output: _WISQARS_OUTPUT = None,
 ):
     """County-level injury/violence data (2019-present)."""
-    rows = get_injury_county(state=state, county=county, intent=intent, year=year, limit=limit)
+    rows = get_injury_county(
+        state=state, county=county, intent=intent, year=year, limit=limit
+    )
     _print_rows(rows, format, output)
 
 
 @wisqars_app.command("tract")
 def cmd_wisqars_tract(
-    state: Annotated[Optional[str], typer.Option("--state")] = None,
-    tract: Annotated[Optional[str], typer.Option("--tract", help="Census tract GEOID partial match")] = None,
-    intent: Annotated[
-        Optional[str], typer.Option("--intent", help="All_Homicide|Drug_OD")
+    state: Annotated[str | None, typer.Option("--state")] = None,
+    tract: Annotated[
+        str | None, typer.Option("--tract", help="Census tract GEOID partial match")
     ] = None,
-    year: Annotated[Optional[str], typer.Option("--year")] = None,
+    intent: Annotated[
+        str | None, typer.Option("--intent", help="All_Homicide|Drug_OD")
+    ] = None,
+    year: Annotated[str | None, typer.Option("--year")] = None,
     limit: Annotated[int, typer.Option("--limit")] = 500,
     format: _WISQARS_FORMAT = "table",
     output: _WISQARS_OUTPUT = None,
 ):
     """Census-tract-level injury/violence data (2022-present)."""
-    rows = get_injury_census_tract(state=state, tract=tract, intent=intent, year=year, limit=limit)
+    rows = get_injury_census_tract(
+        state=state, tract=tract, intent=intent, year=year, limit=limit
+    )
     _print_rows(rows, format, output)
 
 
 @wisqars_app.command("query")
 def cmd_wisqars_query(
     dataset_id: Annotated[str, typer.Argument(help="Registry key or Socrata ID")],
-    where: Annotated[Optional[str], typer.Option("--where")] = None,
-    select: Annotated[Optional[str], typer.Option("--select")] = None,
-    order: Annotated[Optional[str], typer.Option("--order")] = None,
+    where: Annotated[str | None, typer.Option("--where")] = None,
+    select: Annotated[str | None, typer.Option("--select")] = None,
+    order: Annotated[str | None, typer.Option("--order")] = None,
     limit: Annotated[int, typer.Option("--limit")] = 200,
     format: _WISQARS_FORMAT = "table",
     output: _WISQARS_OUTPUT = None,
@@ -2474,7 +2697,9 @@ def cmd_wisqars_query(
     """Raw SODA query against any WISQARS dataset."""
     ds = WISQARS_DATASETS.get(dataset_id)
     socrata_id = ds.id if ds else dataset_id
-    rows = wisqars_query_dataset(socrata_id, where=where, select=select, order=order, limit=limit)
+    rows = wisqars_query_dataset(
+        socrata_id, where=where, select=select, order=order, limit=limit
+    )
     _print_rows(rows, format, output)
 
 
@@ -2484,7 +2709,9 @@ def cmd_wisqars_query(
 @grasp_app.command("list")
 def cmd_grasp_list(json_out: Annotated[bool, typer.Option("--json")] = False):
     """List available GRASP datasets."""
-    rows = [{"key": k, "years": d.years, "name": d.name} for k, d in GRASP_DATASETS.items()]
+    rows = [
+        {"key": k, "years": d.years, "name": d.name} for k, d in GRASP_DATASETS.items()
+    ]
     if json_out:
         print(json.dumps(rows, indent=2))
         return
@@ -2501,26 +2728,40 @@ def cmd_grasp_list(json_out: Annotated[bool, typer.Option("--json")] = False):
 
 @grasp_hantavirus_app.command("cases")
 def cmd_grasp_hanta_cases(
-    state: Annotated[Optional[str], typer.Option("--state", help="e.g. 'New Mexico'")] = None,
-    state_fips: Annotated[Optional[str], typer.Option("--state-fips", help="2-digit FIPS")] = None,
-    outcome: Annotated[Optional[str], typer.Option("--outcome", help="Alive|Dead|Unknown")] = None,
-    year: Annotated[Optional[str], typer.Option("--year", help="4-digit year or 'Before 1993'")] = None,
+    state: Annotated[
+        str | None, typer.Option("--state", help="e.g. 'New Mexico'")
+    ] = None,
+    state_fips: Annotated[
+        str | None, typer.Option("--state-fips", help="2-digit FIPS")
+    ] = None,
+    outcome: Annotated[
+        str | None, typer.Option("--outcome", help="Alive|Dead|Unknown")
+    ] = None,
+    year: Annotated[
+        str | None, typer.Option("--year", help="4-digit year or 'Before 1993'")
+    ] = None,
     format: _WISQARS_FORMAT = "table",
     output: _WISQARS_OUTPUT = None,
 ):
     """Individual hantavirus case records."""
-    rows = get_hantavirus_cases(state_fips=state_fips, state_name=state, outcome=outcome, year=year)
+    rows = get_hantavirus_cases(
+        state_fips=state_fips, state_name=state, outcome=outcome, year=year
+    )
     _print_rows(rows, format, output)
 
 
 @grasp_hantavirus_app.command("by-year")
-def cmd_grasp_hanta_by_year(format: _WISQARS_FORMAT = "table", output: _WISQARS_OUTPUT = None):
+def cmd_grasp_hanta_by_year(
+    format: _WISQARS_FORMAT = "table", output: _WISQARS_OUTPUT = None
+):
     """Hantavirus case counts and deaths by year."""
     _print_rows(summarize_hantavirus_by_year(), format, output)
 
 
 @grasp_hantavirus_app.command("by-state")
-def cmd_grasp_hanta_by_state(format: _WISQARS_FORMAT = "table", output: _WISQARS_OUTPUT = None):
+def cmd_grasp_hanta_by_state(
+    format: _WISQARS_FORMAT = "table", output: _WISQARS_OUTPUT = None
+):
     """Hantavirus case counts and deaths by state."""
     _print_rows(summarize_hantavirus_by_state(), format, output)
 
@@ -2534,8 +2775,12 @@ _GRASP_EPIWEEK_HELP = "Epiweek range YYYYWW e.g. '202001-202526' or single '2020
 
 @grasp_fluview_app.command("ili-data")
 def cmd_grasp_fluview_ili_data(
-    region: Annotated[Optional[list[str]], typer.Option("--region", help=_GRASP_REGION_HELP)] = None,
-    epiweeks: Annotated[Optional[str], typer.Option("--epiweeks", help=_GRASP_EPIWEEK_HELP)] = None,
+    region: Annotated[
+        list[str] | None, typer.Option("--region", help=_GRASP_REGION_HELP)
+    ] = None,
+    epiweeks: Annotated[
+        str | None, typer.Option("--epiweeks", help=_GRASP_EPIWEEK_HELP)
+    ] = None,
     format: _WISQARS_FORMAT = "table",
     output: _WISQARS_OUTPUT = None,
 ):
@@ -2546,7 +2791,9 @@ def cmd_grasp_fluview_ili_data(
 
 @grasp_fluview_app.command("ili-by-region")
 def cmd_grasp_fluview_ili_by_region(
-    epiweeks: Annotated[Optional[str], typer.Option("--epiweeks", help=_GRASP_EPIWEEK_HELP)] = None,
+    epiweeks: Annotated[
+        str | None, typer.Option("--epiweeks", help=_GRASP_EPIWEEK_HELP)
+    ] = None,
     format: _WISQARS_FORMAT = "table",
     output: _WISQARS_OUTPUT = None,
 ):
@@ -2556,8 +2803,12 @@ def cmd_grasp_fluview_ili_by_region(
 
 @grasp_fluview_app.command("clinical-data")
 def cmd_grasp_fluview_clinical_data(
-    region: Annotated[Optional[list[str]], typer.Option("--region", help=_GRASP_REGION_HELP)] = None,
-    epiweeks: Annotated[Optional[str], typer.Option("--epiweeks", help=_GRASP_EPIWEEK_HELP)] = None,
+    region: Annotated[
+        list[str] | None, typer.Option("--region", help=_GRASP_REGION_HELP)
+    ] = None,
+    epiweeks: Annotated[
+        str | None, typer.Option("--epiweeks", help=_GRASP_EPIWEEK_HELP)
+    ] = None,
     format: _WISQARS_FORMAT = "table",
     output: _WISQARS_OUTPUT = None,
 ):
@@ -2572,11 +2823,17 @@ _GRASP_LOCS = sorted(FLUSURV_LOCATIONS.keys())
 @grasp_flusurv_app.command("data")
 def cmd_grasp_flusurv_data(
     location: Annotated[
-        Optional[list[str]],
-        typer.Option("--location", help=f"Location code(s). Valid: {', '.join(_GRASP_LOCS)}"),
+        list[str] | None,
+        typer.Option(
+            "--location", help=f"Location code(s). Valid: {', '.join(_GRASP_LOCS)}"
+        ),
     ] = None,
-    epiweeks: Annotated[Optional[str], typer.Option("--epiweeks", help=_GRASP_EPIWEEK_HELP)] = None,
-    season: Annotated[Optional[str], typer.Option("--season", help="e.g. '2019-20'")] = None,
+    epiweeks: Annotated[
+        str | None, typer.Option("--epiweeks", help=_GRASP_EPIWEEK_HELP)
+    ] = None,
+    season: Annotated[
+        str | None, typer.Option("--season", help="e.g. '2019-20'")
+    ] = None,
     format: _WISQARS_FORMAT = "table",
     output: _WISQARS_OUTPUT = None,
 ):
@@ -2587,7 +2844,9 @@ def cmd_grasp_flusurv_data(
 
 @grasp_flusurv_app.command("by-season")
 def cmd_grasp_flusurv_by_season(
-    location: Annotated[str, typer.Option("--location", help=f"Valid: {', '.join(_GRASP_LOCS)}")] = "network_all",
+    location: Annotated[
+        str, typer.Option("--location", help=f"Valid: {', '.join(_GRASP_LOCS)}")
+    ] = "network_all",
     format: _WISQARS_FORMAT = "table",
     output: _WISQARS_OUTPUT = None,
 ):
@@ -2597,13 +2856,17 @@ def cmd_grasp_flusurv_by_season(
 
 @grasp_flusurv_app.command("by-location")
 def cmd_grasp_flusurv_by_location(
-    epiweeks: Annotated[Optional[str], typer.Option("--epiweeks")] = None,
-    season: Annotated[Optional[str], typer.Option("--season", help="e.g. '2019-20'")] = None,
+    epiweeks: Annotated[str | None, typer.Option("--epiweeks")] = None,
+    season: Annotated[
+        str | None, typer.Option("--season", help="e.g. '2019-20'")
+    ] = None,
     format: _WISQARS_FORMAT = "table",
     output: _WISQARS_OUTPUT = None,
 ):
     """Compare peak/avg hospitalization rates across all FluSurv-NET locations."""
-    _print_rows(summarize_flusurv_by_location(epiweeks=epiweeks, season=season), format, output)
+    _print_rows(
+        summarize_flusurv_by_location(epiweeks=epiweeks, season=season), format, output
+    )
 
 
 # ── nssp ──────────────────────────────────────────────────────────────────────
@@ -2622,43 +2885,55 @@ def cmd_nssp_query(
             help="'*' for all, 'ca' for state, '06037' for county FIPS, '4' for HHS region",
         ),
     ] = "*",
-    start: Annotated[Optional[str], typer.Option("--start", help="Epiweek YYYYWW")] = None,
-    end: Annotated[Optional[str], typer.Option("--end", help="Epiweek YYYYWW")] = None,
+    start: Annotated[str | None, typer.Option("--start", help="Epiweek YYYYWW")] = None,
+    end: Annotated[str | None, typer.Option("--end", help="Epiweek YYYYWW")] = None,
     format: _WISQARS_FORMAT = "table",
     output: _WISQARS_OUTPUT = None,
 ):
     """ED visit % for a pathogen by geography."""
     rows = get_ed_visits(
-        pathogen=pathogen, geo_type=geo_type, geo_value=geo_value, start_date=start, end_date=end
+        pathogen=pathogen,
+        geo_type=geo_type,
+        geo_value=geo_value,
+        start_date=start,
+        end_date=end,
     )
-    rows.sort(key=lambda r: (r.get("geo_value", ""), r.get("time_value", 0)), reverse=True)
+    rows.sort(
+        key=lambda r: (r.get("geo_value", ""), r.get("time_value", 0)), reverse=True
+    )
     _print_rows(rows, format, output)
 
 
 @nssp_app.command("national")
 def cmd_nssp_national(
-    start: Annotated[Optional[str], typer.Option("--start")] = None,
-    end: Annotated[Optional[str], typer.Option("--end")] = None,
+    start: Annotated[str | None, typer.Option("--start")] = None,
+    end: Annotated[str | None, typer.Option("--end")] = None,
     format: _WISQARS_FORMAT = "table",
     output: _WISQARS_OUTPUT = None,
 ):
     """All four pathogens (covid/influenza/rsv/combined) at national level."""
     rows = get_national_trends(start_date=start, end_date=end)
-    rows.sort(key=lambda r: (r.get("pathogen", ""), r.get("time_value", 0)), reverse=True)
+    rows.sort(
+        key=lambda r: (r.get("pathogen", ""), r.get("time_value", 0)), reverse=True
+    )
     _print_rows(rows, format, output)
 
 
 @nssp_app.command("hhs")
 def cmd_nssp_hhs(
     pathogen: Annotated[str, typer.Argument(help=f"One of: {list(NSSP_SIGNALS)}")],
-    region: Annotated[Optional[int], typer.Option("--region", help="1-10, omit for all")] = None,
-    start: Annotated[Optional[str], typer.Option("--start")] = None,
-    end: Annotated[Optional[str], typer.Option("--end")] = None,
+    region: Annotated[
+        int | None, typer.Option("--region", help="1-10, omit for all")
+    ] = None,
+    start: Annotated[str | None, typer.Option("--start")] = None,
+    end: Annotated[str | None, typer.Option("--end")] = None,
     format: _WISQARS_FORMAT = "table",
     output: _WISQARS_OUTPUT = None,
 ):
     """ED visit % by HHS region."""
-    rows = get_hhs_region_trends(pathogen=pathogen, region=region, start_date=start, end_date=end)
+    rows = get_hhs_region_trends(
+        pathogen=pathogen, region=region, start_date=start, end_date=end
+    )
     rows.sort(key=lambda r: (r.get("geo_value", ""), r.get("time_value", 0)))
     _print_rows(rows, format, output)
 
@@ -2670,7 +2945,9 @@ def cmd_nssp_hhs(
 def cmd_nis_list(survey: Annotated[str, typer.Argument(help="child|teen")]):
     """List available years for a NIS survey."""
     years = list_years(survey)
-    console.print(f"Available years for NIS-{survey.capitalize()}: {years[0]}–{years[-1]}")
+    console.print(
+        f"Available years for NIS-{survey.capitalize()}: {years[0]}–{years[-1]}"
+    )
     console.print("  " + "  ".join(str(y) for y in years))
 
 
@@ -2679,12 +2956,15 @@ def cmd_nis_stream(
     survey: Annotated[str, typer.Argument(help="child|teen")],
     year: Annotated[int, typer.Argument()],
     state: Annotated[
-        Optional[str], typer.Option("--state", help="FIPS ('06'), postal ('CA'), or full name")
+        str | None,
+        typer.Option("--state", help="FIPS ('06'), postal ('CA'), or full name"),
     ] = None,
     vaccines: Annotated[
-        Optional[list[str]], typer.Option("--vaccines", help="Column names to stream")
+        list[str] | None, typer.Option("--vaccines", help="Column names to stream")
     ] = None,
-    limit: Annotated[Optional[int], typer.Option("--limit", help="Max records (buffered)")] = None,
+    limit: Annotated[
+        int | None, typer.Option("--limit", help="Max records (buffered)")
+    ] = None,
     format: Annotated[str, typer.Option("-f", "--format")] = "csv",
     output: _WISQARS_OUTPUT = None,
 ):
@@ -2706,9 +2986,12 @@ def cmd_nis_stream(
 def cmd_nis_rates(
     survey: Annotated[str, typer.Argument(help="child|teen")],
     year: Annotated[int, typer.Argument()],
-    state: Annotated[Optional[str], typer.Option("--state", help="Limit to one state")] = None,
+    state: Annotated[
+        str | None, typer.Option("--state", help="Limit to one state")
+    ] = None,
     vaccines: Annotated[
-        Optional[list[str]], typer.Option("--vaccines", help="UTD column names to aggregate")
+        list[str] | None,
+        typer.Option("--vaccines", help="UTD column names to aggregate"),
     ] = None,
     format: _WISQARS_FORMAT = "table",
     output: _WISQARS_OUTPUT = None,
@@ -2728,7 +3011,8 @@ def cmd_nis_national(
     survey: Annotated[str, typer.Argument(help="child|teen")],
     year: Annotated[int, typer.Argument()],
     vaccines: Annotated[
-        Optional[list[str]], typer.Option("--vaccines", help="UTD column names to aggregate")
+        list[str] | None,
+        typer.Option("--vaccines", help="UTD column names to aggregate"),
     ] = None,
     format: _WISQARS_FORMAT = "table",
     output: _WISQARS_OUTPUT = None,
@@ -2746,7 +3030,7 @@ def cmd_nis_national(
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 
-def _print_rows(rows: list[dict], format: str, output: Optional[Path]) -> None:
+def _print_rows(rows: list[dict], format: str, output: Path | None) -> None:
     """Render a list of row dicts (SEER / CDC Open results) as table|csv|json."""
     if not rows:
         console.print("[yellow]No data returned.[/yellow]")
@@ -2800,7 +3084,7 @@ def _output_response(
     client: WonderClient,
     response_xml: str,
     format: str,
-    output: Optional[Path],
+    output: Path | None,
     no_totals: bool,
 ) -> None:
     if format == "xml":
